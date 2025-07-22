@@ -70,6 +70,7 @@ const CancelAndStopIntentHandler = {
         const speakOutput = 'Adiós, espero que vuelvas a intentarlo pronto.';
         return handlerInput.responseBuilder
             .speak(speakOutput)
+            .withShouldEndSession(true)
             .getResponse();
     }
 };
