@@ -6,7 +6,7 @@ const LaunchRequestHandler = {
     },
     handle(handlerInput) {
 
-        const speakOutput = '¡Bienvenido a <lang xml:lang="en-US">Escape Room Creator</lang>! Puedes decir: "iniciar juego" para comenzar la narrativa. También puedes decir "salir" para abandonar.';
+        const speakOutput = '¡Bienvenido a <lang xml:lang="en-US">Escape Room Creator</lang>! Puedes decir: "iniciar juego" para comenzar la narrativa. También puedes decir "salir del juego" para abandonar.';
         return handlerInput.responseBuilder
             .speak(speakOutput)
             .reprompt(speakOutput)
@@ -52,7 +52,7 @@ const FallbackIntentHandler = {
             && Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.FallbackIntent';
     },
     handle(handlerInput) {
-        const speakOutput = 'No he entendido lo que has dicho. Puedes decir: "iniciar juego" para comenzar la narrativa. También puedes decir "salir" para abandonar.';
+        const speakOutput = 'No he entendido lo que has dicho. Puedes decir: "iniciar juego" para comenzar la narrativa. También puedes decir "salir del juego" para abandonar.';
         return handlerInput.responseBuilder
             .speak(speakOutput)
             .reprompt('¿Qué quieres hacer ahora?')
@@ -80,7 +80,7 @@ const HelpIntentHandler = {
             && Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.HelpIntent';
     },
     handle(handlerInput) {
-        const speakOutput = 'Estás dentro de Escape Room Creator. Puedes decir: "iniciar juego" para comenzar la narrativa. También puedes decir "salir" para abandonar. ¿Qué quieres hacer?';
+        const speakOutput = 'Estás dentro de Escape Room Creator. Puedes decir: "iniciar juego" para comenzar la narrativa. También puedes decir "salir del juego" para abandonar. ¿Qué quieres hacer?';
 
         return handlerInput.responseBuilder
             .speak(speakOutput)
