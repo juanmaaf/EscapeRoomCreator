@@ -14,38 +14,6 @@ const LaunchRequestHandler = {
     }
 };
 
-// const IniciarJuegoIntentHandler = {
-//     canHandle(handlerInput) {
-//         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
-//             && Alexa.getIntentName(handlerInput.requestEnvelope) === 'IniciarJuego';
-//     },
-//     handle(handlerInput) {
-//         const speakOutput = `Has despertado en una habitación oscura.
-//         No recuerdas cómo has llegado hasta aquí.
-//         Las paredes son lisas, grises, sin ventanas. Solo una puerta cerrada y una luz tenue parpadeando sobre tu cabeza.
-//         De repente, escuchas una voz metálica que retumba por la estancia.
-//         <break time="1s"/>
-//         Bienvenido, jugador. Estás atrapado en lo que llamamos <lang xml:lang="en-US">Escape Room Creator</lang>.
-//         Aquí pondremos a prueba tu ingenio, tu lógica... y tu paciencia.
-//         Tu misión es simple. Salir. Tu única herramienta… tu mente.
-//         Para conseguirlo, deberás superar tres desafíos.
-//         El primer desafío...
-//         El segundo desafío...
-//         Y finalmente, el tercer desafío....
-//         <break time="1s"/>
-//         No hay límite de tiempo. No hay ayuda exterior. Solo tú... y tu voz.
-//         Cuando estés listo para empezar... solo dilo.
-//         Tu aventura comienza cuando tú lo decidas.
-//         <break time="1s"/>
-//         ¿Qué quieres hacer ahora?`;
-
-//         return handlerInput.responseBuilder
-//             .speak(speakOutput)
-//             .reprompt('¿Qué quieres hacer ahora?')
-//             .getResponse();
-//     }
-// };
-
 const IniciarJuegoIntentHandler = {
     canHandle(handlerInput) {
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
@@ -74,6 +42,14 @@ const IniciarJuegoIntentHandler = {
 
         return handlerInput.responseBuilder
             .speak(speakOutput)
+            .addDirective({
+                type: 'Alexa.Presentation.Web.RenderWebDocument',
+                version: '1.0',
+                webBrowserInterface: {
+                    url: 'https://d1qeen6fmshz39.cloudfront.net/entrega3/puzles/cifrado_cesar.html',
+                    fullscreen: true,
+                }
+            })
             .reprompt('¿Cuál es tu respuesta?')
             .getResponse();
     }
@@ -132,7 +108,6 @@ const ResolverPuzzleIntentHandler = {
                     speakOutput = `Correcto. Has completado los tres desafíos.
                     Una puerta se abre lentamente frente a ti.
                     Has logrado escapar. ¡Enhorabuena, escapista!`;
-                    shouldEndSession = true;
                 } else {
                     speakOutput = 'No es complicado. ¿Cuánto es diez más diez?';
                 }
@@ -166,7 +141,6 @@ const FallbackIntentHandler = {
       let repromptOutput = '';
   
       if (sessionAttributes.estado === 'jugando') {
-        // Estás en medio del juego
         const desafio = sessionAttributes.desafioActual || 1;
         speakOutput = `No he entendido tu respuesta. Recuerda que estás en el desafío número ${desafio}. Por favor, responde diciendo "la respuesta es..." seguido de tu solución.`;
         repromptOutput = `Intenta responder al desafío ${desafio} o pide ayuda.`;
@@ -174,7 +148,6 @@ const FallbackIntentHandler = {
         speakOutput = 'Has completado todos los desafíos. Gracias por jugar. Si quieres iniciar de nuevo, dime "iniciar juego".';
         repromptOutput = '¿Quieres jugar otra vez?';
       } else {
-        // Estado inicial o sin juego iniciado
         speakOutput = 'No he entendido eso. Puedes decir "iniciar juego" para comenzar.';
         repromptOutput = '¿Quieres iniciar el juego?';
       }
