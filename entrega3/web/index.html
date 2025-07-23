@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <title>Escape Room Creator</title>
+    <script src="https://cdn.html.games.alexa.a2z.com/alexa-html/latest/alexa-html.js"></script>
+</head>
+<body>
+    <header>
+        <h1>Escape Room Creator</h1>
+    </header>
+
+    <script>
+        var alexaClient;
+        Alexa.create({version: '1.1'})
+            .then(({ alexa, message }) => {
+                alexaClient = alexa;
+                console.log('Alexa ready');
+
+                alexaClient.onMessage((message) => {
+                    if (message.action === 'redirect' && message.page) {
+                        const url = message.page + '?mensajeCifrado=' + encodeURIComponent(message.mensajeCifrado || '');
+
+                        window.location.href = url;
+                    }
+                });
+            })
+            .catch(error => {
+                console.error('Alexa not ready', error);
+            });
+    </script>
+</body>
+</html>

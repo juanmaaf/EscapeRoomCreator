@@ -9,7 +9,17 @@ const LaunchRequestHandler = {
         const speakOutput = '¡Bienvenido a <lang xml:lang="en-US">Escape Room Creator</lang>! Puedes decir: "iniciar juego" para comenzar la narrativa. También puedes decir "salir del juego" para abandonar.';
         return handlerInput.responseBuilder
             .speak(speakOutput)
-            .reprompt(speakOutput)
+            .addDirective({
+                type: "Alexa.Presentation.HTML.Start",
+                data: {},
+                request: {
+                    uri: "https://d1qeen6fmshz39.cloudfront.net/entrega3/index.html",
+                    method: "GET",
+                },
+                configuration: {
+                    timeoutInSeconds: 300
+                }
+            })
             .getResponse();
     }
 };
@@ -41,22 +51,15 @@ const IniciarJuegoIntentHandler = {
         O V S H   T B U K V.
         ¿Qué dice el mensaje?`;
 
-        const codigoACifrar = "O V S H   T B U K V";
-
         return handlerInput.responseBuilder
         .speak(speakOutput)
         .addDirective({
-            type: 'Alexa.Presentation.HTML.Start',
-            request: {
-            uri: 'https://d1qeen6fmshz39.cloudfront.net/entrega3/puzles/cifrado_cesar.html',
-            method: 'GET',
-            },
-            configuration: {
-            timeoutInSeconds: 300,
-            data: {
-                mensajeCifrado: codigoACifrar
+            type: 'Alexa.Presentation.HTML.HandleMessage',
+            message: {
+                action: 'redirect',
+                page: 'puzles/cifrado_cesar.html',
+                mensajeCifrado: "O V S H   T B U K V"
             }
-            },
         })
         .reprompt('¿Cuál es tu respuesta?')
         .getResponse();
