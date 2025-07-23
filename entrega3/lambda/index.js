@@ -53,10 +53,10 @@ const IniciarJuegoIntentHandler = {
             },
             configuration: {
             timeoutInSeconds: 300,
-            },
             data: {
-            mensajeCifrado: codigoACifrar
+                mensajeCifrado: codigoACifrar
             }
+            },
         })
         .reprompt('¿Cuál es tu respuesta?')
         .getResponse();

@@ -1,25 +1,26 @@
 <!DOCTYPE html>
 <html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <title>Disco César</title>
-  <style>
-    body {
+  <head>
+    <meta charset="UTF-8">
+    <title>Disco César</title>
+    <script src="https://cdn.html.games.alexa.a2z.com/alexa-html/latest/alexa-html.js"></script>
+    <style>
+      body {
       font-family: sans-serif;
       text-align: center;
       margin: 0;
       padding: 20px;
       background: #f9f9f9;
-    }
+      }
 
-    .disco-container {
+      .disco-container {
       position: relative;
       width: 350px;
       height: 350px;
       margin: auto;
-    }
+      }
 
-    .disco {
+      .disco {
       position: absolute;
       width: 100%;
       height: 100%;
@@ -29,76 +30,89 @@
       justify-content: center;
       align-items: center;
       font-size: 14px;
-    }
+      }
 
-    .disco div {
+      .disco div {
       position: absolute;
       width: 20px;
       text-align: center;
-    }
+      }
 
-    .interior {
+      .interior {
       background-color: rgba(0, 128, 255, 0.1);
       transition: transform 0.3s ease;
-    }
+      }
 
-    #clave-slider {
+      #clave-slider {
       width: 40%;
       margin-top: 20px;
-    }
-  </style>
-</head>
-<body>
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Disco de Cifrado César</h2>
+    <div class="disco-container">
+      <div class="disco exterior"></div>
+      <div class="disco interior" id="disco-interior"></div>
+    </div>
+    <input type="range" id="clave-slider" min="0" max="26" value="0" />
+    <p>Clave actual: <span id="clave-valor">0</span></p>
+    <p><strong>Mensaje cifrado:</strong> <span id="mensaje-cifrado">Cargando...</span></p>
 
-  <h2>Disco de Cifrado César</h2>
+    <script>
+      const ALFABETO = "ABCDEFGHIJKLMNÑOPQRSTUVWXYZ";
+      let alexaClient;
 
-  <div class="disco-container">
-    <div class="disco exterior"></div>
-    <div class="disco interior" id="disco-interior"></div>
-  </div>
+      function crearDiscoLetras(container, letras, radio) {
+        const n = letras.length;
+        letras.split("").forEach((letra, i) => {
+          const angle = (360 / n) * i;
+          const el = document.createElement("div");
+          el.style.transform = `rotate(${angle}deg) translate(${radio}px) rotate(-${angle}deg)`;
+          el.textContent = letra;
+          container.appendChild(el);
+        });
+      }
 
-  <input type="range" id="clave-slider" min="0" max="26" value="0">
-  <p>Clave actual: <span id="clave-valor">0</span></p>
+      function initializeAlexa() {
+        Alexa.create({ version: '1.1' })
+          .then((args) => {
+            const { alexa, message } = args;
+            alexaClient = alexa;
+            
+            if (alexa.data && alexa.data.mensajeCifrado) {
+              document.getElementById('mensaje-cifrado').textContent = alexa.data.mensajeCifrado;
+              document.getElementById('debug').textContent = 'Datos recibidos correctamente de Alexa';
+            } else {
+              document.getElementById('debug').textContent = 'No se recibieron datos de Alexa';
+            }
+            alexaClient.onMessage((message) => {
+              console.log('Mensaje recibido:', message);
+              if (message.mensajeCifrado) {
+                document.getElementById('mensaje-cifrado').textContent = message.mensajeCifrado;
+              }
+            });
+          })
+          .catch(error => {
+            console.error('Error inicializando Alexa:', error);
+            document.getElementById('debug').textContent = 'Error inicializando Alexa: ' + error.message;
+          });
+      }
+      
+      document.addEventListener('DOMContentLoaded', () => {
+        crearDiscoLetras(document.querySelector(".exterior"), ALFABETO, 150);
+        crearDiscoLetras(document.querySelector(".interior"), ALFABETO, 120);
+        
+        initializeAlexa();
+      });
 
-  <script>
-    const ALFABETO = "ABCDEFGHIJKLMNÑOPQRSTUVWXYZ";
-
-    function crearDiscoLetras(container, letras, radio) {
-	  const n = letras.length;
-	  letras.split('').forEach((letra, i) => {
-	    const angle = (360 / n) * i;
-	    const el = document.createElement("div");
-	    el.style.transform = `rotate(${angle}deg) translate(${radio}px) rotate(-${angle}deg)`;
-	    el.textContent = letra;
-	    container.appendChild(el);
-	  });
-    }
-
-    crearDiscoLetras(document.querySelector(".exterior"), ALFABETO, 150);
-    crearDiscoLetras(document.querySelector(".interior"), ALFABETO, 120);
-
-    const slider = document.getElementById("clave-slider");
-    const discoInterior = document.getElementById("disco-interior");
-    const claveValor = document.getElementById("clave-valor");
-
-    slider.addEventListener("input", () => {
-      const clave = parseInt(slider.value, 10);
-      claveValor.textContent = clave;
-      const gradosPorLetra = 360 / ALFABETO.length;
-      const angulo = clave * gradosPorLetra;
-      discoInterior.style.transform = `rotate(-${angulo}deg)`;
-    });
-    
-    window.addEventListener("alexaHTMLReady", () => {
-	    try {
-	      const data = window.alexaWebAPI.getData();
-	      const mensaje = data.mensajeCifrado || "No recibido";
-	      document.getElementById("mensaje-cifrado").textContent = mensaje;
-	    } catch (e) {
-	      console.error("No se pudo obtener el mensaje:", e);
-	      document.getElementById("mensaje-cifrado").textContent = "No disponible";
-	    }
-    });
-  </script>
-</body>
+      document.getElementById("clave-slider").addEventListener("input", (e) => {
+        const clave = parseInt(e.target.value, 10);
+        document.getElementById("clave-valor").textContent = clave;
+        const gradosPorLetra = 360 / ALFABETO.length;
+        const angulo = clave * gradosPorLetra;
+        document.getElementById("disco-interior").style.transform = `rotate(-${angulo}deg)`;
+      });
+    </script>
+  </body>
 </html>
