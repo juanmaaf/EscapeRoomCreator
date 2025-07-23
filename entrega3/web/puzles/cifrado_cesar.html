@@ -56,7 +56,7 @@
     </div>
     <input type="range" id="clave-slider" min="0" max="26" value="0" />
     <p>Clave actual: <span id="clave-valor">0</span></p>
-    <p><strong>Mensaje cifrado:</strong><span id="mensaje-cifrado"> Cargando...</span></p></p>
+    <p><strong>Mensaje cifrado: </strong><span id="mensaje-cifrado">Cargando...</span></p>
 
     <script>
       const ALFABETO = "ABCDEFGHIJKLMNÑOPQRSTUVWXYZ";
@@ -84,14 +84,14 @@
 
         const mensajeCifrado = decodeURIComponent(obtenerMensajeDesdeURL());
         document.getElementById('mensaje-cifrado').textContent = mensajeCifrado;
-      });
 
-      document.getElementById("clave-slider").addEventListener("input", (e) => {
-        const clave = parseInt(e.target.value, 10);
-        document.getElementById("clave-valor").textContent = clave;
-        const gradosPorLetra = 360 / ALFABETO.length;
-        const angulo = clave * gradosPorLetra;
-        document.getElementById("disco-interior").style.transform = `rotate(-${angulo}deg)`;
+        document.getElementById("clave-slider").addEventListener("input", (e) => {
+          const clave = parseInt(e.target.value, 10);
+          document.getElementById("clave-valor").textContent = clave;
+          const gradosPorLetra = 360 / ALFABETO.length;
+          const angulo = clave * gradosPorLetra;
+          document.getElementById("disco-interior").style.transform = `rotate(-${angulo}deg)`;
+        });
       });
     </script>
   </body>

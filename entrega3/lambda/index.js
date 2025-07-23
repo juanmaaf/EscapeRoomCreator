@@ -1,26 +1,38 @@
 const Alexa = require('ask-sdk-core');
 
+function tienePantalla(handlerInput) {
+    return !!Alexa.getSupportedInterfaces(handlerInput.requestEnvelope)['Alexa.Presentation.HTML'];
+}
+
 const LaunchRequestHandler = {
     canHandle(handlerInput) {
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'LaunchRequest';
     },
     handle(handlerInput) {
-
         const speakOutput = '¡Bienvenido a <lang xml:lang="en-US">Escape Room Creator</lang>! Puedes decir: "iniciar juego" para comenzar la narrativa. También puedes decir "salir del juego" para abandonar.';
-        return handlerInput.responseBuilder
-            .speak(speakOutput)
-            .addDirective({
-                type: "Alexa.Presentation.HTML.Start",
-                data: {},
-                request: {
-                    uri: "https://d1qeen6fmshz39.cloudfront.net/entrega3/index.html",
-                    method: "GET",
-                },
-                configuration: {
-                    timeoutInSeconds: 300
-                }
-            })
-            .getResponse();
+
+        if (tienePantalla(handlerInput)) {
+            return handlerInput.responseBuilder
+                .speak(speakOutput)
+                .reprompt('¿Qué quieres hacer? Puedes decir "iniciar juego" para comenzar.')
+                .addDirective({
+                    type: "Alexa.Presentation.HTML.Start",
+                    data: {},
+                    request: {
+                        uri: "https://d1qeen6fmshz39.cloudfront.net/entrega3/index.html",
+                        method: "GET",
+                    },
+                    configuration: {
+                        timeoutInSeconds: 300
+                    }
+                })
+                .getResponse();
+        } else {
+            return handlerInput.responseBuilder
+                .speak(speakOutput)
+                .reprompt('¿Qué quieres hacer? Puedes decir "iniciar juego" para comenzar.')
+                .getResponse();
+        }
     }
 };
 
@@ -51,18 +63,25 @@ const IniciarJuegoIntentHandler = {
         O V S H   T B U K V.
         ¿Qué dice el mensaje?`;
 
-        return handlerInput.responseBuilder
-        .speak(speakOutput)
-        .addDirective({
-            type: 'Alexa.Presentation.HTML.HandleMessage',
-            message: {
-                action: 'redirect',
-                page: 'puzles/cifrado_cesar.html',
-                mensajeCifrado: "O V S H   T B U K V"
-            }
-        })
-        .reprompt('¿Cuál es tu respuesta?')
-        .getResponse();
+        if (tienePantalla(handlerInput)) {
+            return handlerInput.responseBuilder
+                .speak(speakOutput)
+                .addDirective({
+                    type: 'Alexa.Presentation.HTML.HandleMessage',
+                    message: {
+                        action: 'redirect',
+                        page: 'https://d1qeen6fmshz39.cloudfront.net/entrega3/puzles/cifrado_cesar.html',
+                        mensajeCifrado: "O V S H   T B U K V"
+                    }
+                })
+                .reprompt('¿Cuál es tu respuesta?')
+                .getResponse();
+        } else {
+            return handlerInput.responseBuilder
+                .speak(speakOutput)
+                .reprompt('¿Cuál es tu respuesta?')
+                .getResponse();
+        }
     }
 };
 
