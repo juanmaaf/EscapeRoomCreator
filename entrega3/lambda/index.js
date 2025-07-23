@@ -36,22 +36,30 @@ const IniciarJuegoIntentHandler = {
         Deberás superar tres desafíos. El primero comienza ahora:
         <break time="1s"/>
         Es un mensaje cifrado con código César.
-        La pista es: La capital de España es Madrid. El mensaje cifrado es: 
-        N J S B E   E F U S B T   Q J A B S S B.
+        La pista es: Se empieza así en todos los lenguajes de programación.
+        El mensaje cifrado es: 
+        O V S H   T B U K V.
         ¿Qué dice el mensaje?`;
 
+        const codigoACifrar = "O V S H   T B U K V";
+
         return handlerInput.responseBuilder
-            .speak(speakOutput)
-            .addDirective({
-                type: 'Alexa.Presentation.Web.RenderWebDocument',
-                version: '1.0',
-                webBrowserInterface: {
-                    url: 'https://d1qeen6fmshz39.cloudfront.net/entrega3/puzles/cifrado_cesar.html',
-                    fullscreen: true,
-                }
-            })
-            .reprompt('¿Cuál es tu respuesta?')
-            .getResponse();
+        .speak(speakOutput)
+        .addDirective({
+            type: 'Alexa.Presentation.HTML.Start',
+            request: {
+            uri: 'https://d1qeen6fmshz39.cloudfront.net/entrega3/puzles/cifrado_cesar.html',
+            method: 'GET',
+            },
+            configuration: {
+            timeoutInSeconds: 300,
+            },
+            data: {
+            mensajeCifrado: codigoACifrar
+            }
+        })
+        .reprompt('¿Cuál es tu respuesta?')
+        .getResponse();
     }
 };
 
@@ -85,7 +93,7 @@ const ResolverPuzzleIntentHandler = {
                     Escucha atentamente: 
                     No pesa nada, pero si lo pones en una caja, esta se vuelve más ligera. ¿Qué es?`;
                 } else {
-                    speakOutput = 'Eso no parece correcto. Recuerda la pista: detrás de la pizarra. Intenta de nuevo.';
+                    speakOutput = 'Eso no parece correcto. Pista: la clave es el número de días de la semana. Intenta de nuevo.';
                 }
                 break;
 
