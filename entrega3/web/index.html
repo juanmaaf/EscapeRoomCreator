@@ -24,22 +24,22 @@
 
     <script>
         var alexaClient;
-        Alexa.create({version: '1.1'})
+        Alexa.create({ version: '1.1' })
             .then(({ alexa, message }) => {
                 alexaClient = alexa;
                 console.log('Alexa ready');
-        
-                return alexaClient.ready();
-            })
-            .then(() => {
-                alexaClient.onMessage((message) => {
-                    if (message.action === 'redirect' && message.page) {
-                        const url = message.page + '?mensajeCifrado=' + encodeURIComponent(message.mensajeCifrado || '');
-        
-                        document.getElementById('iframe-container').innerHTML = `
-                            <iframe src="${url}" title="Puzzle interactivo"></iframe>
-                        `;
-                    }
+
+                alexaClient.skill.onMessage((msg) => {
+                const message = msg.message;
+                console.log('Mensaje recibido:', message);
+
+                if (message.action === 'redirect' && message.page) {
+                    const url = message.page + '?mensajeCifrado=' + encodeURIComponent(message.mensajeCifrado || '');
+
+                    document.getElementById('iframe-container').innerHTML = `
+                    <iframe src="${url}" title="Puzzle interactivo"></iframe>
+                    `;
+                }
                 });
             })
             .catch(error => {
