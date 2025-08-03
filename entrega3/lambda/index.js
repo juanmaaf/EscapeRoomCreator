@@ -1,7 +1,18 @@
 const Alexa = require('ask-sdk-core');
+const fs = require('fs');
+const path = require('path');
 
 function tienePantalla(handlerInput) {
     return !!Alexa.getSupportedInterfaces(handlerInput.requestEnvelope)['Alexa.Presentation.HTML'];
+}
+
+let juegos = [];
+try {
+    const data = fs.readFileSync(path.resolve(__dirname, 'juegos.json'), 'utf8');
+    juegos = JSON.parse(data);
+    console.log(`Cargados ${juegos.length} juegos desde juegos.json`);
+} catch (error) {
+    console.error('Error leyendo juegos.json:', error);
 }
 
 const LaunchRequestHandler = {
@@ -29,163 +40,139 @@ const LaunchRequestHandler = {
                 .getResponse();
         } else {
             return handlerInput.responseBuilder
-                .speak(speakOutput)
-                .reprompt('¿Qué quieres hacer? Puedes decir "iniciar juego" para comenzar.')
+                .speak('Esta experiencia solo está disponible en dispositivos con pantalla como Echo Show.')
+                .withShouldEndSession(true)
                 .getResponse();
         }
     }
 };
 
-const IniciarJuegoIntentHandler = {
+const CargarEscapeRoomIntentHandler = {
     canHandle(handlerInput) {
-        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
-            && Alexa.getIntentName(handlerInput.requestEnvelope) === 'IniciarJuego';
+      return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
+        && Alexa.getIntentName(handlerInput.requestEnvelope) === 'CargarEscapeRoom';
     },
     handle(handlerInput) {
-        const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-        sessionAttributes.estado = 'jugando';
-        sessionAttributes.desafioActual = 1;
-        handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
+      const idJuego = Alexa.getSlotValue(handlerInput.requestEnvelope, 'idJuego');
+      const juego = juegos.find(j => j.id === Number(idJuego));
 
-        const speakOutput = `Has despertado en una habitación oscura.
-        No recuerdas cómo has llegado hasta aquí.
-        Las paredes son lisas, grises, sin ventanas. Solo una puerta cerrada y una luz tenue parpadeando sobre tu cabeza.
-        De repente, escuchas una voz metálica que retumba por la estancia.
-        <break time="1s"/>
-        Bienvenido, jugador. Estás atrapado en lo que llamamos <lang xml:lang="en-US">Escape Room Creator</lang>.
-        Aquí pondremos a prueba tu ingenio, tu lógica... y tu paciencia.
-        Tu misión es simple. Salir. Tu única herramienta… tu mente.
-        Deberás superar tres desafíos. El primero comienza ahora:
-        <break time="1s"/>
-        Es un mensaje cifrado con código César.
-        La pista es: Se empieza así en todos los lenguajes de programación.
-        El mensaje cifrado es: 
-        O V S H   T B U K V.
-        ¿Qué dice el mensaje?`;
+      if (!juego) {
+        return handlerInput.responseBuilder
+          .speak(`No encontré ningún juego con el número ${idJuego}. Inténtalo otra vez.`)
+          .reprompt('Por favor, dime el número del juego que quieres cargar.')
+          .getResponse();
+      }
 
-        if (tienePantalla(handlerInput)) {
-            return handlerInput.responseBuilder
-                .speak(speakOutput)
-                .addDirective({
-                    type: 'Alexa.Presentation.HTML.HandleMessage',
-                    message: {
-                        action: 'redirect',
-                        page: 'https://d1qeen6fmshz39.cloudfront.net/entrega3/puzles/cifrado_cesar.html',
-                        mensajeCifrado: "O V S H   T B U K V"
-                    }
-                })
-                .reprompt('¿Cuál es tu respuesta?')
-                .getResponse();
-        } else {
-            return handlerInput.responseBuilder
-                .speak(speakOutput)
-                .reprompt('¿Cuál es tu respuesta?')
-                .getResponse();
-        }
+      const speakOutput = `<speak>${juego.narrativa}</speak>`;
+
+      const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
+      sessionAttributes.juego = juego;
+      if (sessionAttributes.puzzleActual === undefined || sessionAttributes.puzzleActual === null) {
+        sessionAttributes.puzzleActual = 0;
+      }
+      handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
+
+      return handlerInput.responseBuilder
+        .speak(speakOutput)
+        .reprompt('¿Quieres empezar los desafíos?')
+        .getResponse();
     }
 };
+
+const IniciarPuzleActualIntentHandler = {
+    canHandle(handlerInput) {
+      const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
+      const tieneJuegoCargado = !!sessionAttributes.juego;
+  
+      return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
+        && Alexa.getIntentName(handlerInput.requestEnvelope) === 'IniciarPuzleActual'
+        && tieneJuegoCargado;
+    },
+    handle(handlerInput) {
+      const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
+      const puzzleActual = sessionAttributes.puzzleActual || 0;
+      const puzzle = sessionAttributes.juego.puzles[puzzleActual];
+  
+      const speakOutput = `Aquí está tu desafío actual: ${puzzle.instruccion}`;
+  
+      return handlerInput.responseBuilder
+        .speak(speakOutput)
+        .reprompt('¿Cuál es tu respuesta?')
+        .addDirective({
+          type: 'Alexa.Presentation.HTML.HandleMessage',
+          message: {
+            datos: puzzle.datos
+          }
+        })
+        .getResponse();
+    }
+  };
 
 const ResolverPuzzleIntentHandler = {
     canHandle(handlerInput) {
-        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
-            && Alexa.getIntentName(handlerInput.requestEnvelope) === 'ResolverPuzzleIntent';
+      const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
+      const juegoCargado = !!sessionAttributes.juego;
+      const puzzleEmpezado = sessionAttributes.puzzleActual !== undefined && sessionAttributes.puzzleActual !== null;
+  
+      return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
+        && Alexa.getIntentName(handlerInput.requestEnvelope) === 'ResolverPuzzle'
+        && juegoCargado
+        && puzzleEmpezado;
     },
     handle(handlerInput) {
-        const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-        const userAnswer = (handlerInput.requestEnvelope.request.intent.slots.respuestaUsuario.value || '').toLowerCase();
-
-        let speakOutput = '';
-        let shouldEndSession = false;
-
-        if (sessionAttributes.estado !== 'jugando') {
-            speakOutput = 'Aún no has iniciado un juego. Di "iniciar juego" para comenzar.';
-            return handlerInput.responseBuilder
-                .speak(speakOutput)
-                .reprompt('¿Quieres iniciar el juego?')
-                .getResponse();
-        }
-
-        switch (sessionAttributes.desafioActual) {
-            case 1:
-                if (userAnswer.includes('miro') && userAnswer.includes('pizarra')) {
-                    sessionAttributes.desafioActual = 2;
-                    speakOutput = `Correcto. Has resuelto el mensaje. Encuentras una llave detrás de la pizarra.
-                    Pasemos al segundo desafío.
-                    <break time="1s"/>
-                    Escucha atentamente: 
-                    No pesa nada, pero si lo pones en una caja, esta se vuelve más ligera. ¿Qué es?`;
-                } else {
-                    speakOutput = 'Eso no parece correcto. Pista: la clave es el número de días de la semana. Intenta de nuevo.';
-                }
-                break;
-
-            case 2:
-                if (userAnswer.includes('hueco') || userAnswer.includes('vacío')) {
-                    sessionAttributes.desafioActual = 3;
-                    speakOutput = `Correcto. El vacío no pesa nada.
-                    Pasemos al tercer y último desafío.
-                    <break time="1s"/>
-                    Escucha: 
-                    Si 2 más 2 es igual a 4, y 3 más 3 es igual a 6, entonces 10 más 10 es...`;
-                } else {
-                    speakOutput = 'Pista: no es algo físico. Intenta otra vez.';
-                }
-                break;
-
-            case 3:
-                if (userAnswer.includes('20')) {
-                    sessionAttributes.estado = 'completado';
-                    speakOutput = `Correcto. Has completado los tres desafíos.
-                    Una puerta se abre lentamente frente a ti.
-                    Has logrado escapar. ¡Enhorabuena, escapista!`;
-                } else {
-                    speakOutput = 'No es complicado. ¿Cuánto es diez más diez?';
-                }
-                break;
-
-            default:
-                speakOutput = 'Aún no has iniciado un desafío. Di "iniciar juego".';
-                break;
-        }
-
+      const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
+      const puzzleActualIndex = sessionAttributes.puzzleActual;
+      const puzzle = sessionAttributes.juego.puzles[puzzleActualIndex];
+      const respuestaUsuario = (handlerInput.requestEnvelope.request.intent.slots.respuestaUsuario.value || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+  
+      const respuestasCorrectas = puzzle.respuestaCorrecta.map(r =>
+        r.toLowerCase()
+         .normalize('NFD')
+         .replace(/[\u0300-\u036f]/g, '')
+      );
+  
+      if (respuestasCorrectas.includes(respuestaUsuario)) {
+        sessionAttributes.puzzleActual = puzzleActualIndex + 1;
         handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
-
-        const responseBuilder = handlerInput.responseBuilder.speak(speakOutput);
-        if (shouldEndSession) {
-            return responseBuilder.withShouldEndSession(true).getResponse();
+  
+        if (sessionAttributes.puzzleActual >= sessionAttributes.juego.puzles.length) {
+          sessionAttributes.juego = null;
+          sessionAttributes.puzzleActual = null;
+          handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
+  
+          return handlerInput.responseBuilder
+            .speak('¡Correcto! Has completado todos los desafíos. ¡Felicidades, has terminado el juego!')
+            .withShouldEndSession(true)
+            .getResponse();
         } else {
-            return responseBuilder.reprompt('¿Cuál es tu respuesta?').getResponse();
+          return handlerInput.responseBuilder
+            .speak('¡Correcto! ¿Quieres continuar con el siguiente desafío? Di "sí" para continuar.')
+            .reprompt('Di "sí" para continuar con el siguiente desafío.')
+            .getResponse();
         }
+      } else {
+        return handlerInput.responseBuilder
+          .speak('No es la respuesta correcta. Inténtalo de nuevo.')
+          .reprompt(puzzle.instruccion)
+          .getResponse();
+      }
     }
 };
 
 const FallbackIntentHandler = {
     canHandle(handlerInput) {
-      return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
-          && Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.FallbackIntent';
+        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
+            && Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.FallbackIntent';
     },
     handle(handlerInput) {
-      const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-  
-      let speakOutput = '';
-      let repromptOutput = '';
-  
-      if (sessionAttributes.estado === 'jugando') {
-        const desafio = sessionAttributes.desafioActual || 1;
-        speakOutput = `No he entendido tu respuesta. Recuerda que estás en el desafío número ${desafio}. Por favor, responde diciendo "la respuesta es..." seguido de tu solución.`;
-        repromptOutput = `Intenta responder al desafío ${desafio} o pide ayuda.`;
-      } else if (sessionAttributes.estado === 'terminado') {
-        speakOutput = 'Has completado todos los desafíos. Gracias por jugar. Si quieres iniciar de nuevo, dime "iniciar juego".';
-        repromptOutput = '¿Quieres jugar otra vez?';
-      } else {
-        speakOutput = 'No he entendido eso. Puedes decir "iniciar juego" para comenzar.';
-        repromptOutput = '¿Quieres iniciar el juego?';
-      }
-  
-      return handlerInput.responseBuilder
-          .speak(speakOutput)
-          .reprompt(repromptOutput)
-          .getResponse();
+        const speakOutput = 'No he entendido eso. Por favor, usa la pantalla para interactuar con el juego.';
+        return handlerInput.responseBuilder
+            .speak(speakOutput)
+            .withShouldEndSession(false)
+            .getResponse();
     }
 };
 
@@ -210,25 +197,10 @@ const HelpIntentHandler = {
             && Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.HelpIntent';
     },
     handle(handlerInput) {
-        const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-
-        let speakOutput = '';
-        let repromptOutput = '';
-
-        if (sessionAttributes.estado === 'jugando') {
-        speakOutput = 'Estás en medio del juego. Para avanzar, debes resolver el desafío actual. Puedes responder diciendo "la respuesta es..." y tu solución. Si quieres salir, puedes decir "salir del juego". ¿Qué deseas hacer?';
-        repromptOutput = '¿Quieres intentar responder o salir del juego?';
-        } else if (sessionAttributes.estado === 'completado') {
-        speakOutput = 'Has terminado todos los desafíos. Si quieres volver a jugar, di "iniciar juego". ¿Qué quieres hacer?';
-        repromptOutput = '¿Quieres iniciar un nuevo juego?';
-        } else {
-        speakOutput = 'Puedes decir "iniciar juego" para comenzar la aventura o "salir del juego" para abandonar.';
-        repromptOutput = '¿Quieres iniciar el juego?';
-        }
-
+        const speakOutput = 'Para jugar, utiliza la pantalla para interactuar con el juego. Si quieres salir, di "salir del juego".';
         return handlerInput.responseBuilder
             .speak(speakOutput)
-            .reprompt(repromptOutput)
+            .reprompt('¿Qué quieres hacer?')
             .getResponse();
     }
 };
@@ -236,7 +208,8 @@ const HelpIntentHandler = {
 exports.handler = Alexa.SkillBuilders.custom()
     .addRequestHandlers(
         LaunchRequestHandler,
-        IniciarJuegoIntentHandler,
+        CargarEscapeRoomIntentHandler,
+        IniciarPuzleActualIntentHandler,
         ResolverPuzzleIntentHandler,
         CancelAndStopIntentHandler,
         HelpIntentHandler,
