@@ -20,12 +20,12 @@ const LaunchRequestHandler = {
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'LaunchRequest';
     },
     handle(handlerInput) {
-        const speakOutput = '¡Bienvenido a <lang xml:lang="en-US">Escape Room Creator</lang>! Puedes decir: "iniciar juego" para comenzar la narrativa. También puedes decir "salir del juego" para abandonar.';
+        const speakOutput = '¡Bienvenido a <lang xml:lang="en-US">Escape Room Creator</lang>! Puedes decir: "cargar juego número..." para cargar un juego. También puedes decir "salir del juego" para abandonar.';
 
         if (tienePantalla(handlerInput)) {
             return handlerInput.responseBuilder
                 .speak(speakOutput)
-                .reprompt('¿Qué quieres hacer? Puedes decir "iniciar juego" para comenzar.')
+                .reprompt('¿Qué quieres hacer? Puedes decir "cargar juego número..." para cargar un juego.')
                 .addDirective({
                     type: "Alexa.Presentation.HTML.Start",
                     data: {},
@@ -63,7 +63,10 @@ const CargarEscapeRoomIntentHandler = {
           .getResponse();
       }
 
-      const speakOutput = `<speak>${juego.narrativa}</speak>`;
+      const speakOutput = `<speak>
+        Cargando juego número ${idJuego}.<break time="3s"/>
+        ${juego.narrativa}
+      </speak>`;
 
       const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
       sessionAttributes.juego = juego;
