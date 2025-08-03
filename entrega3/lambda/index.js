@@ -104,6 +104,7 @@ const IniciarPuzleActualIntentHandler = {
         .addDirective({
           type: 'Alexa.Presentation.HTML.HandleMessage',
           message: {
+            action: "mostrar_puzle",
             datos: puzle.datos,
             tipo: puzle.tipo
           }
