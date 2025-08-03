@@ -67,8 +67,8 @@ const CargarEscapeRoomIntentHandler = {
 
       const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
       sessionAttributes.juego = juego;
-      if (sessionAttributes.puzzleActual === undefined || sessionAttributes.puzzleActual === null) {
-        sessionAttributes.puzzleActual = 0;
+      if (sessionAttributes.puzleActual === undefined || sessionAttributes.puzleActual === null) {
+        sessionAttributes.puzleActual = 0;
       }
       handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
 
@@ -90,10 +90,10 @@ const IniciarPuzleActualIntentHandler = {
     },
     handle(handlerInput) {
       const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-      const puzzleActual = sessionAttributes.puzzleActual || 0;
-      const puzzle = sessionAttributes.juego.puzles[puzzleActual];
+      const puzleActual = sessionAttributes.puzleActual || 0;
+      const puzle = sessionAttributes.juego.puzles[puzleActual];
   
-      const speakOutput = `Aquí está tu desafío actual: ${puzzle.instruccion}`;
+      const speakOutput = `Aquí está tu desafío actual: ${puzle.instruccion}`;
   
       return handlerInput.responseBuilder
         .speak(speakOutput)
@@ -101,46 +101,47 @@ const IniciarPuzleActualIntentHandler = {
         .addDirective({
           type: 'Alexa.Presentation.HTML.HandleMessage',
           message: {
-            datos: puzzle.datos
+            datos: puzle.datos,
+            tipo: puzle.tipo
           }
         })
         .getResponse();
     }
   };
 
-const ResolverPuzzleIntentHandler = {
+const ResolverPuzleIntentHandler = {
     canHandle(handlerInput) {
       const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
       const juegoCargado = !!sessionAttributes.juego;
-      const puzzleEmpezado = sessionAttributes.puzzleActual !== undefined && sessionAttributes.puzzleActual !== null;
+      const puzleEmpezado = sessionAttributes.puzleActual !== undefined && sessionAttributes.puzzeActual !== null;
   
       return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
-        && Alexa.getIntentName(handlerInput.requestEnvelope) === 'ResolverPuzzle'
+        && Alexa.getIntentName(handlerInput.requestEnvelope) === 'ResolverPuzle'
         && juegoCargado
-        && puzzleEmpezado;
+        && puzleEmpezado;
     },
     handle(handlerInput) {
       const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-      const puzzleActualIndex = sessionAttributes.puzzleActual;
-      const puzzle = sessionAttributes.juego.puzles[puzzleActualIndex];
+      const puzleActualIndex = sessionAttributes.puzleActual;
+      const puzle = sessionAttributes.juego.puzles[puzleActualIndex];
       const respuestaUsuario = (handlerInput.requestEnvelope.request.intent.slots.respuestaUsuario.value || '')
         .toLowerCase()
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '');
   
-      const respuestasCorrectas = puzzle.respuestaCorrecta.map(r =>
+      const respuestasCorrectas = puzle.respuestaCorrecta.map(r =>
         r.toLowerCase()
          .normalize('NFD')
          .replace(/[\u0300-\u036f]/g, '')
       );
   
       if (respuestasCorrectas.includes(respuestaUsuario)) {
-        sessionAttributes.puzzleActual = puzzleActualIndex + 1;
+        sessionAttributes.puzleActual = puzleActualIndex + 1;
         handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
   
-        if (sessionAttributes.puzzleActual >= sessionAttributes.juego.puzles.length) {
+        if (sessionAttributes.puzleActual >= sessionAttributes.juego.puzles.length) {
           sessionAttributes.juego = null;
-          sessionAttributes.puzzleActual = null;
+          sessionAttributes.puzleActual = null;
           handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
   
           return handlerInput.responseBuilder
@@ -156,7 +157,7 @@ const ResolverPuzzleIntentHandler = {
       } else {
         return handlerInput.responseBuilder
           .speak('No es la respuesta correcta. Inténtalo de nuevo.')
-          .reprompt(puzzle.instruccion)
+          .reprompt(puzle.instruccion)
           .getResponse();
       }
     }
@@ -210,7 +211,7 @@ exports.handler = Alexa.SkillBuilders.custom()
         LaunchRequestHandler,
         CargarEscapeRoomIntentHandler,
         IniciarPuzleActualIntentHandler,
-        ResolverPuzzleIntentHandler,
+        ResolverPuzleIntentHandler,
         CancelAndStopIntentHandler,
         HelpIntentHandler,
         FallbackIntentHandler
