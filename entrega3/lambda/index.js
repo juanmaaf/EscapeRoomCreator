@@ -111,13 +111,13 @@ const IniciarPuzleActualIntentHandler = {
         })
         .getResponse();
     }
-  };
+};
 
 const ResolverPuzleIntentHandler = {
     canHandle(handlerInput) {
       const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
       const juegoCargado = !!sessionAttributes.juego;
-      const puzleEmpezado = sessionAttributes.puzleActual !== undefined && sessionAttributes.puzzeActual !== null;
+      const puzleEmpezado = sessionAttributes.puzleActual !== undefined && sessionAttributes.puzleActual !== null;
   
       return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
         && Alexa.getIntentName(handlerInput.requestEnvelope) === 'ResolverPuzle'
