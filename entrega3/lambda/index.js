@@ -77,7 +77,7 @@ const CargarEscapeRoomIntentHandler = {
 
       return handlerInput.responseBuilder
         .speak(speakOutput)
-        .reprompt('¿Quieres empezar los desafíos?')
+        .reprompt('¿Quieres empezar los desafíos? Dí Sí para continuar')
         .getResponse();
     }
 };
