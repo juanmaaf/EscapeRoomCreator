@@ -139,7 +139,8 @@ const IniciarPuzleActualIntentHandler = {
             action: "mostrar_puzle",
             datos: puzle.datos,
             tipo: puzle.tipo,
-            instruccion: puzle.instruccion
+            instruccion: puzle.instruccion,
+            tiempoMaximo: puzle.tiempoEstimadoSegundos
           }
         })
         .getResponse();
@@ -148,56 +149,89 @@ const IniciarPuzleActualIntentHandler = {
 
 const ResolverPuzleIntentHandler = {
     canHandle(handlerInput) {
-      const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-      const juegoCargado = !!sessionAttributes.juego;
-      const puzleEmpezado = sessionAttributes.puzleIniciado === true;
-  
-      return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
-        && Alexa.getIntentName(handlerInput.requestEnvelope) === 'ResolverPuzle'
-        && juegoCargado
-        && puzleEmpezado;
+        const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
+        const juegoCargado = !!sessionAttributes.juego;
+        const puzleEmpezado = sessionAttributes.puzleIniciado === true;
+
+        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
+            && Alexa.getIntentName(handlerInput.requestEnvelope) === 'ResolverPuzle'
+            && juegoCargado
+            && puzleEmpezado;
     },
     handle(handlerInput) {
-      const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-      const puzleActualIndex = sessionAttributes.puzleActual;
-      const puzle = sessionAttributes.juego.puzles[puzleActualIndex];
-      const respuestaUsuario = (handlerInput.requestEnvelope.request.intent.slots.respuestaUsuario.value || '')
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '');
-  
-      const respuestasCorrectas = puzle.respuestaCorrecta.map(r =>
-        r.toLowerCase()
-         .normalize('NFD')
-         .replace(/[\u0300-\u036f]/g, '')
-      );
-  
-      if (respuestasCorrectas.includes(respuestaUsuario)) {
-        sessionAttributes.puzleActual = puzleActualIndex + 1;
-        sessionAttributes.puzleIniciado = false;
-        handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
-  
-        if (sessionAttributes.puzleActual >= sessionAttributes.juego.puzles.length) {
-          sessionAttributes.juego = null;
-          sessionAttributes.puzleActual = null;
-          handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
-  
-          return handlerInput.responseBuilder
-            .speak('¡Correcto! Has completado todos los desafíos. ¡Felicidades, has terminado el juego!')
-            .withShouldEndSession(true)
-            .getResponse();
+        const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
+        const puzleActualIndex = sessionAttributes.puzleActual;
+        const puzle = sessionAttributes.juego.puzles[puzleActualIndex];
+
+        sessionAttributes.fallosPuzle = sessionAttributes.fallosPuzle || 0;
+
+        const respuestaUsuario = (handlerInput.requestEnvelope.request.intent.slots.respuestaUsuario.value || '')
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '');
+
+        const respuestasCorrectas = puzle.respuestaCorrecta.map(r =>
+            r.toLowerCase()
+             .normalize('NFD')
+             .replace(/[\u0300-\u036f]/g, '')
+        );
+
+        let speakOutput = '';
+        let addDirective = null;
+
+        if (respuestasCorrectas.includes(respuestaUsuario)) {
+            sessionAttributes.puzleActual = puzleActualIndex + 1;
+            sessionAttributes.puzleIniciado = false;
+            sessionAttributes.fallosPuzle = 0;
+            handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
+
+            if (sessionAttributes.puzleActual >= sessionAttributes.juego.puzles.length) {
+                sessionAttributes.juego = null;
+                sessionAttributes.puzleActual = null;
+                handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
+
+                return handlerInput.responseBuilder
+                    .speak('¡Correcto! Has completado todos los desafíos. ¡Felicidades, has terminado el juego!')
+                    .withShouldEndSession(true)
+                    .getResponse();
+            } else {
+                speakOutput = '¡Correcto! ¿Quieres continuar con el siguiente desafío? Di "sí" para continuar.';
+            }
         } else {
-          return handlerInput.responseBuilder
-            .speak('¡Correcto! ¿Quieres continuar con el siguiente desafío? Di "sí" para continuar.')
-            .reprompt('Di "sí" para continuar con el siguiente desafío.')
-            .getResponse();
+            sessionAttributes.fallosPuzle += 1;
+            handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
+
+            if (sessionAttributes.fallosPuzle === 1) {
+                speakOutput = 'Prueba otra vez.';
+            } else if (sessionAttributes.fallosPuzle === 2) {
+                speakOutput = `No es correcto. Aquí tienes una pista: ${puzle.pistas[0]}`;
+                if (tienePantalla(handlerInput)) {
+                    addDirective = {
+                        type: 'Alexa.Presentation.HTML.HandleMessage',
+                        message: {
+                            action: 'mostrar_pista',
+                            pista: puzle.pistas[0]
+                        }
+                    };
+                }
+            } else if (sessionAttributes.fallosPuzle >= 3) {
+                speakOutput = `No es correcto. Avanzamos al siguiente desafío, pero recuerda, tu tiempo se verá penalizado.`;
+                sessionAttributes.puzleActual = puzleActualIndex + 1;
+                sessionAttributes.puzleIniciado = false;
+                sessionAttributes.fallosPuzle = 0;
+                handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
+            }
         }
-      } else {
-        return handlerInput.responseBuilder
-          .speak('No es la respuesta correcta. Inténtalo de nuevo.')
-          .reprompt(puzle.instruccion)
-          .getResponse();
-      }
+
+        const responseBuilder = handlerInput.responseBuilder
+            .speak(speakOutput)
+            .reprompt(puzle.instruccion);
+
+        if (addDirective) {
+            responseBuilder.addDirective(addDirective);
+        }
+
+        return responseBuilder.getResponse();
     }
 };
 

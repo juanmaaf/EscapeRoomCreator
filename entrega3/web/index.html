@@ -7,19 +7,36 @@
     <style>
         #iframe-container {
             width: 100%;
-            height: 100vh;
+            height: 80vh;
         }
         iframe {
             width: 100%;
             height: 100%;
             border: none;
         }
+        #contador {
+            font-size: 1.5em;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        #pista-container {
+            border: 2px dashed #888;
+            padding: 15px;
+            margin-top: 10px;
+            background-color: #f0f0f0;
+            font-size: 1.2em;
+            color: #333;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            min-height: 40px;
+        }
     </style>
 </head>
 <body>
-    <div id="iframe-container">
-        Esperando instrucciones...
-    </div>
+    <div id="contador"></div>
+    <div id="iframe-container">Esperando instrucciones...</div>
+    <div id="pista-container"></div>
 
     <script src="https://d1qeen6fmshz39.cloudfront.net/entrega3/js/main.js"></script>
 </body>

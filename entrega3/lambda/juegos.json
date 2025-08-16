@@ -1,32 +1,50 @@
 [
-    {
-      "id": 1,
-      "titulo": "Escape Room Entrega 3",
-      "narrativa": "Has despertado en una habitación oscura.<break time=\"1s\"/>No recuerdas cómo has llegado hasta aquí.<break time=\"1s\"/>Las paredes son lisas, grises, sin ventanas. Solo una puerta cerrada y una luz tenue parpadeando sobre tu cabeza.<break time=\"1s\"/>De repente, escuchas una voz metálica que retumba por la estancia.<break time=\"1s\"/>Bienvenido, jugador. Estás atrapado en lo que llamamos <lang xml:lang=\"en-US\">Escape Room Creator</lang>.<break time=\"1s\"/>Aquí pondremos a prueba tu ingenio, tu lógica... y tu paciencia.<break time=\"1s\"/>Tu misión es simple. Salir. Tu única herramienta… tu mente.<break time=\"1s\"/>Deberás superar tres desafíos. El primero comienza ahora:<break time=\"1s\"/>",
-      "puzles": [
-        {
-          "id": 1,
-          "tipo": "cifrado-cesar",
-          "instruccion": "Descifra este mensaje César con desplazamiento 8: O W S I   T C U L W",
-          "datos": {
-            "mensajeCifrado": "O W S I   T C U L W"
-          },
-          "respuestaCorrecta": ["hola mundo"]
+  {
+    "id": 1,
+    "titulo": "Escape Room Entrega 3",
+    "narrativa": "Has despertado en una habitación oscura.<break time=\"1s\"/>No recuerdas cómo has llegado hasta aquí.<break time=\"1s\"/>Las paredes son lisas, grises, sin ventanas. Solo una puerta cerrada y una luz tenue parpadeando sobre tu cabeza.<break time=\"1s\"/>De repente, escuchas una voz metálica que retumba por la estancia.<break time=\"1s\"/>Bienvenido, jugador. Estás atrapado en lo que llamamos <lang xml:lang=\"en-US\">Escape Room Creator</lang>.<break time=\"1s\"/>Aquí pondremos a prueba tu ingenio, tu lógica... y tu paciencia.<break time=\"1s\"/>Tu misión es simple. Salir. Tu única herramienta… tu mente.<break time=\"1s\"/>Deberás superar tres desafíos. El primero comienza ahora:<break time=\"1s\"/>",
+    "puzles": [
+      {
+        "id": 1,
+        "tipo": "cifrado-cesar",
+        "instruccion": "Descifra este mensaje César con desplazamiento 8: O W S I   T C U L W",
+        "datos": {
+          "mensajeCifrado": "O W S I   T C U L W"
         },
-        {
-          "id": 2,
-          "tipo": "acertijo",
-          "instruccion": "No pesa nada, pero si lo pones en una caja, esta se vuelve más ligera. ¿Qué es?",
-          "datos": {},
-          "respuestaCorrecta": ["el vacío", "un hueco"]
-        },
-        {
-          "id": 3,
-          "tipo": "logica",
-          "instruccion": "¿Cuánto es 3x2+2x5+7?",
-          "datos": {},
-          "respuestaCorrecta": ["23", "veintitrés"]
-        }
-      ]
-    }
+        "respuestaCorrecta": ["hola mundo"],
+        "tiempoEstimadoSegundos": 30,
+        "fallosMaximos": 3,
+        "pistas": [
+          "Recuerda que cada letra se desplaza 8 posiciones hacia atrás en el alfabeto.",
+          "La primera palabra empieza con 'h', la segunda con 'm'."
+        ]
+      },
+      {
+        "id": 2,
+        "tipo": "acertijo",
+        "instruccion": "No pesa nada, pero si lo pones en una caja, esta se vuelve más ligera. ¿Qué es?",
+        "datos": {},
+        "respuestaCorrecta": ["el vacío"],
+        "tiempoEstimadoSegundos": 45,
+        "fallosMaximos": 3,
+        "pistas": [
+          "Piensa en algo que al faltar, hace que algo pese menos.",
+          "Es lo que queda cuando no hay nada en el interior de la caja."
+        ]
+      },
+      {
+        "id": 3,
+        "tipo": "logica",
+        "instruccion": "¿Cuánto es 3x2+2x5+7?",
+        "datos": {},
+        "respuestaCorrecta": ["23"],
+        "tiempoEstimadoSegundos": 30,
+        "fallosMaximos": 3,
+        "pistas": [
+          "Aplica primero la multiplicación antes de la suma.",
+          "3x2=6 y 2x5=10, luego suma 7."
+        ]
+      }
+    ]
+  }
 ]
