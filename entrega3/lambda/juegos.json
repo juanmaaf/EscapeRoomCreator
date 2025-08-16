@@ -23,9 +23,9 @@
         {
           "id": 3,
           "tipo": "logica",
-          "instruccion": "¿Cuánto es 3x2+2x5-7 ",
+          "instruccion": "¿Cuánto es 3x2+2x5+7?",
           "datos": {},
-          "respuestaCorrecta": ["9", "nueve"]
+          "respuestaCorrecta": ["23", "veintitrés"]
         }
       ]
     }
