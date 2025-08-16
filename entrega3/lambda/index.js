@@ -47,6 +47,36 @@ const LaunchRequestHandler = {
     }
 };
 
+const IntentSinJuegoHandler = {
+  canHandle(handlerInput) {
+      const intentName = Alexa.getIntentName(handlerInput.requestEnvelope);
+      const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
+      const tieneJuegoCargado = !!sessionAttributes.juego;
+      const puzleEmpezado = sessionAttributes.puzleIniciado === true;
+
+      return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' &&
+          (
+              (intentName === 'IniciarPuzleActual' && !tieneJuegoCargado) ||
+              (intentName === 'ResolverPuzle' && (!tieneJuegoCargado || !puzleEmpezado))
+          );
+  },
+  handle(handlerInput) {
+      const intentName = Alexa.getIntentName(handlerInput.requestEnvelope);
+      let speakOutput = '';
+
+      if (intentName === 'IniciarPuzleActual') {
+          speakOutput = `No hay ningún juego cargado actualmente. Puedes decir "cargar juego número..." para empezar un juego.`;
+      } else if (intentName === 'ResolverPuzle') {
+          speakOutput = `No hay ningún desafío iniciado. Primero debes iniciar un puzle antes de intentar resolverlo.`;
+      }
+
+      return handlerInput.responseBuilder
+          .speak(speakOutput)
+          .reprompt('Puedes decir "cargar juego número..." para iniciar un juego.')
+          .getResponse();
+  }
+};
+
 const CargarEscapeRoomIntentHandler = {
     canHandle(handlerInput) {
       return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
@@ -70,9 +100,8 @@ const CargarEscapeRoomIntentHandler = {
 
       const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
       sessionAttributes.juego = juego;
-      if (sessionAttributes.puzleActual === undefined || sessionAttributes.puzleActual === null) {
-        sessionAttributes.puzleActual = 0;
-      }
+      sessionAttributes.puzleActual = 0;
+      sessionAttributes.puzleIniciado = false;
       handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
 
       return handlerInput.responseBuilder
@@ -95,6 +124,9 @@ const IniciarPuzleActualIntentHandler = {
       const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
       const puzleActual = sessionAttributes.puzleActual || 0;
       const puzle = sessionAttributes.juego.puzles[puzleActual];
+
+      sessionAttributes.puzleIniciado = true;
+      handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
   
       const speakOutput = `Aquí está tu desafío actual: ${puzle.instruccion}`;
   
@@ -118,7 +150,7 @@ const ResolverPuzleIntentHandler = {
     canHandle(handlerInput) {
       const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
       const juegoCargado = !!sessionAttributes.juego;
-      const puzleEmpezado = sessionAttributes.puzleActual !== undefined && sessionAttributes.puzleActual !== null;
+      const puzleEmpezado = sessionAttributes.puzleIniciado === true;
   
       return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
         && Alexa.getIntentName(handlerInput.requestEnvelope) === 'ResolverPuzle'
@@ -142,6 +174,7 @@ const ResolverPuzleIntentHandler = {
   
       if (respuestasCorrectas.includes(respuestaUsuario)) {
         sessionAttributes.puzleActual = puzleActualIndex + 1;
+        sessionAttributes.puzleIniciado = false;
         handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
   
         if (sessionAttributes.puzleActual >= sessionAttributes.juego.puzles.length) {
@@ -216,6 +249,7 @@ exports.handler = Alexa.SkillBuilders.custom()
         LaunchRequestHandler,
         CargarEscapeRoomIntentHandler,
         IniciarPuzleActualIntentHandler,
+        IntentSinJuegoHandler,
         ResolverPuzleIntentHandler,
         CancelAndStopIntentHandler,
         HelpIntentHandler,
