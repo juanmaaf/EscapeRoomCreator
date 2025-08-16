@@ -2,25 +2,60 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Acertijo</title>
+  <title>Desafío de Acertijo</title>
   <style>
     body {
-      font-family: sans-serif;
-      background: #f0f4f8;
+      font-family: "Georgia", serif;
+      background: radial-gradient(circle at top, #1a1a1a, #000000);
+      color: #f5f5f5;
       margin: 0;
-      padding: 20px;
-      text-align: center;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
     }
-    h2 { margin-bottom: 10px; }
+
+    .contenedor {
+      background: rgba(20, 20, 20, 0.9);
+      border-radius: 12px;
+      padding: 30px 20px;
+      max-width: 600px;
+      width: 90%;
+      text-align: center;
+      box-shadow: 0 0 25px rgba(255, 255, 255, 0.08);
+      border: 2px solid rgba(255, 215, 0, 0.4);
+    }
+
+    h2 {
+      margin-bottom: 20px;
+      font-size: 1.6em;
+      color: #ffd700;
+      text-shadow: 0 0 8px rgba(255, 215, 0, 0.7);
+    }
+
     #instruccion {
       font-size: 1.3em;
-      margin: 30px 0;
+      margin: 20px 0;
+      line-height: 1.6;
+      color: #e0e0e0;
+      font-style: italic;
+    }
+
+    .icono {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+      color: #ffd700;
+      text-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
     }
   </style>
 </head>
 <body>
-  <h2>Desafío de Acertijo</h2>
-  <p id="instruccion">Cargando...</p>
+  <div class="contenedor">
+    <div class="icono">❓</div>
+    <h2>Desafío de Acertijo</h2>
+    <p id="instruccion">Cargando...</p>
+  </div>
 
   <script>
     function getParam(name) {

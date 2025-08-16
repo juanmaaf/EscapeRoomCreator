@@ -5,22 +5,55 @@
   <title>Desafío Lógico</title>
   <style>
     body {
-      font-family: sans-serif;
-      background: #fffdf5;
+      font-family: "Segoe UI", Roboto, sans-serif;
+      background: #f4f6f9;
       margin: 0;
-      padding: 20px;
-      text-align: center;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
     }
-    h2 { margin-bottom: 10px; }
+
+    .contenedor {
+      background: white;
+      border-radius: 12px;
+      padding: 30px 20px;
+      max-width: 600px;
+      width: 90%;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      border: 2px solid #d0d6e0;
+    }
+
+    h2 {
+      margin-bottom: 20px;
+      font-size: 1.6em;
+      color: #2c3e50;
+      border-bottom: 2px solid #d0d6e0;
+      padding-bottom: 10px;
+    }
+
     #instruccion {
       font-size: 1.3em;
-      margin: 30px 0;
+      margin: 20px 0;
+      color: #34495e;
+      line-height: 1.5;
+    }
+
+    .icono {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+      color: #2980b9;
     }
   </style>
 </head>
 <body>
-  <h2>Desafío de Lógica</h2>
-  <p id="instruccion">Cargando...</p>
+  <div class="contenedor">
+    <div class="icono">🧮</div>
+    <h2>Desafío de Lógica</h2>
+    <p id="instruccion">Cargando...</p>
+  </div>
 
   <script>
     function getParam(name) {
