@@ -1,7 +1,7 @@
 [
     {
       "id": 1,
-      "titulo": "Escape Room Intro",
+      "titulo": "Escape Room Entrega 3",
       "narrativa": "Has despertado en una habitación oscura.<break time=\"1s\"/>No recuerdas cómo has llegado hasta aquí.<break time=\"1s\"/>Las paredes son lisas, grises, sin ventanas. Solo una puerta cerrada y una luz tenue parpadeando sobre tu cabeza.<break time=\"1s\"/>De repente, escuchas una voz metálica que retumba por la estancia.<break time=\"1s\"/>Bienvenido, jugador. Estás atrapado en lo que llamamos <lang xml:lang=\"en-US\">Escape Room Creator</lang>.<break time=\"1s\"/>Aquí pondremos a prueba tu ingenio, tu lógica... y tu paciencia.<break time=\"1s\"/>Tu misión es simple. Salir. Tu única herramienta… tu mente.<break time=\"1s\"/>Deberás superar tres desafíos. El primero comienza ahora:<break time=\"1s\"/>",
       "puzles": [
         {
