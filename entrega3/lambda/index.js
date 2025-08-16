@@ -106,7 +106,8 @@ const IniciarPuzleActualIntentHandler = {
           message: {
             action: "mostrar_puzle",
             datos: puzle.datos,
-            tipo: puzle.tipo
+            tipo: puzle.tipo,
+            instruccion: puzle.instruccion
           }
         })
         .getResponse();

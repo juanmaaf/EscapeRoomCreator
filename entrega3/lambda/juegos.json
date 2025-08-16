@@ -23,9 +23,9 @@
         {
           "id": 3,
           "tipo": "logica",
-          "instruccion": "Si 2 + 2 = 4 y 3 + 3 = 6, ¿cuánto es 10 + 10?",
+          "instruccion": "¿Cuánto es [3x2+2x(3+2)] ",
           "datos": {},
-          "respuestaCorrecta": ["20", "veinte"]
+          "respuestaCorrecta": ["16", "dieciséis"]
         }
       ]
     }
