@@ -115,7 +115,6 @@ const YesIntentHandler = {
     canHandle(handlerInput) {
       const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
       const tieneJuegoCargado = !!sessionAttributes.juego;
-      const puzleIniciado = sessionAttributes.puzleIniciado === true;
   
       return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
         && Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.YesIntent'
@@ -132,7 +131,7 @@ const YesIntentHandler = {
           .reprompt('¿Cuál es tu respuesta?')
           .getResponse();
       }
-      
+
       const puzleActual = sessionAttributes.puzleActual || 0;
       const puzle = sessionAttributes.juego.puzles[puzleActual];
   
@@ -169,11 +168,14 @@ const ResolverPuzleIntentHandler = {
             && juegoCargado
             && puzleEmpezado;
     },
+
     handle(handlerInput) {
         const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
         const puzleActualIndex = sessionAttributes.puzleActual;
-        const puzle = sessionAttributes.juego.puzles[puzleActualIndex];
+        const juego = sessionAttributes.juego;
+        const puzle = juego.puzles[puzleActualIndex];
 
+        // Inicializamos contador de fallos por puzzle
         sessionAttributes.fallosPuzle = sessionAttributes.fallosPuzle || 0;
 
         const respuestaUsuario = (handlerInput.requestEnvelope.request.intent.slots.respuestaUsuario.value || '')
@@ -191,12 +193,14 @@ const ResolverPuzleIntentHandler = {
         let addDirective = null;
 
         if (respuestasCorrectas.includes(respuestaUsuario)) {
-            sessionAttributes.puzleActual = puzleActualIndex + 1;
+            // Respuesta correcta
+            sessionAttributes.puzleActual += 1;
             sessionAttributes.puzleIniciado = false;
             sessionAttributes.fallosPuzle = 0;
             handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
 
-            if (sessionAttributes.puzleActual >= sessionAttributes.juego.puzles.length) {
+            if (sessionAttributes.puzleActual >= juego.puzles.length) {
+                // Fin del juego
                 sessionAttributes.juego = null;
                 sessionAttributes.puzleActual = null;
                 handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
@@ -211,23 +215,24 @@ const ResolverPuzleIntentHandler = {
         } else {
             sessionAttributes.fallosPuzle += 1;
             handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
-
-            if (sessionAttributes.fallosPuzle === 1) {
-                speakOutput = 'Prueba otra vez.';
-            } else if (sessionAttributes.fallosPuzle === 2) {
-                speakOutput = `No es correcto. Aquí tienes una pista: ${puzle.pistas[0]}`;
+        
+            const maxFallos = juego.fallosMaximosPuzle;
+            const numPistas = puzle.pistas.length;
+            const falloActual = sessionAttributes.fallosPuzle;
+        
+            if (falloActual <= numPistas) {
+                speakOutput = `No es correcto. ${puzle.pistas[falloActual - 1]}`;
                 if (tienePantalla(handlerInput)) {
                     addDirective = {
                         type: 'Alexa.Presentation.HTML.HandleMessage',
-                        message: {
-                            action: 'mostrar_pista',
-                            pista: puzle.pistas[0]
-                        }
+                        message: { action: 'mostrar_pista', pista: puzle.pistas[falloActual - 1] }
                     };
                 }
-            } else if (sessionAttributes.fallosPuzle >= 3) {
-                speakOutput = `No es correcto. Con 3 fallos pasamos al siguiente desafío con penalización ¿Quieres continuar?.`;
-                sessionAttributes.puzleActual = puzleActualIndex + 1;
+            } else if (falloActual < maxFallos) {
+                speakOutput = 'Prueba otra vez.';
+            } else {
+                speakOutput = `Has alcanzado el máximo de intentos de este desafío. Pasamos al siguiente. ¿Quieres continuar?`;
+                sessionAttributes.puzleActual += 1;
                 sessionAttributes.puzleIniciado = false;
                 sessionAttributes.fallosPuzle = 0;
                 handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
@@ -238,11 +243,27 @@ const ResolverPuzleIntentHandler = {
             .speak(speakOutput)
             .reprompt(puzle.instruccion);
 
-        if (addDirective) {
-            responseBuilder.addDirective(addDirective);
-        }
+        if (addDirective) responseBuilder.addDirective(addDirective);
 
         return responseBuilder.getResponse();
+    }
+};
+
+const HTMLMessageHandler = {
+    canHandle(handlerInput) {
+        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'Alexa.Presentation.HTML.Message';
+    },
+    handle(handlerInput) {
+        const message = handlerInput.requestEnvelope.request.message;
+
+        if (message.action === "tiempo_acabado") {
+            return handlerInput.responseBuilder
+                .speak("¡Se acabó el tiempo! Pasamos al siguiente desafío. ¿Quieres continuar? Di sí para continuar.")
+                .reprompt("¿Quieres continuar?")
+                .getResponse();
+        }
+
+        return handlerInput.responseBuilder.getResponse();
     }
 };
 
@@ -296,6 +317,7 @@ exports.handler = Alexa.SkillBuilders.custom()
         YesIntentHandler,
         IntentSinJuegoHandler,
         ResolverPuzleIntentHandler,
+        HTMLMessageHandler,
         CancelAndStopIntentHandler,
         HelpIntentHandler,
         FallbackIntentHandler

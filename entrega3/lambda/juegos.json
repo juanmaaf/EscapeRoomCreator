@@ -12,8 +12,7 @@
           "mensajeCifrado": "O W S I   T C U L W"
         },
         "respuestaCorrecta": ["hola mundo"],
-        "tiempoEstimadoSegundos": 30,
-        "fallosMaximos": 3,
+        "tiempoEstimadoSegundos": 60,
         "pistas": [
           "Recuerda que cada letra se desplaza 8 posiciones hacia atrás en el alfabeto.",
           "La primera palabra empieza con 'h', la segunda con 'm'."
@@ -25,8 +24,7 @@
         "instruccion": "No pesa nada, pero si lo pones en una caja, esta se vuelve más ligera. ¿Qué es?",
         "datos": {},
         "respuestaCorrecta": ["el vacío"],
-        "tiempoEstimadoSegundos": 45,
-        "fallosMaximos": 3,
+        "tiempoEstimadoSegundos": 60,
         "pistas": [
           "Piensa en algo que al faltar, hace que algo pese menos.",
           "Es lo que queda cuando no hay nada en el interior de la caja."
@@ -38,13 +36,13 @@
         "instruccion": "¿Cuánto es 3x2+2x5+7?",
         "datos": {},
         "respuestaCorrecta": ["23"],
-        "tiempoEstimadoSegundos": 30,
-        "fallosMaximos": 3,
+        "tiempoEstimadoSegundos": 60,
         "pistas": [
           "Aplica primero la multiplicación antes de la suma.",
           "3x2=6 y 2x5=10, luego suma 7."
         ]
       }
-    ]
+    ],
+    "fallosMaximosPuzle": 4
   }
 ]

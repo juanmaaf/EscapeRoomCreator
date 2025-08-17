@@ -24,7 +24,12 @@ function iniciarContador(tiempoMaximo) {
         if (tiempoRestante <= 0) {
             clearInterval(intervalContador);
             contadorDiv.textContent = "¡Se acabó el tiempo!";
-            // Aquí podrías enviar un mensaje al skill para avisar que se agotó el tiempo
+
+            if (alexaClient) {
+                alexaClient.skill.sendMessage({
+                    action: "tiempo_acabado"
+                });
+            }
         } else {
             contadorDiv.textContent = `Tiempo restante: ${tiempoRestante} s`;
         }
