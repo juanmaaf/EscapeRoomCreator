@@ -13,10 +13,10 @@
       }
 
       .disco-container {
-      position: relative;
-      width: 350px;
-      height: 350px;
-      margin: auto;
+        position: relative;
+        width: 280px;
+        height: 280px;
+        margin: auto;
       }
 
       .disco {
@@ -79,8 +79,8 @@
       }
       
       document.addEventListener('DOMContentLoaded', () => {
-        crearDiscoLetras(document.querySelector(".exterior"), ALFABETO, 150);
-        crearDiscoLetras(document.querySelector(".interior"), ALFABETO, 120);
+        crearDiscoLetras(document.querySelector(".exterior"), ALFABETO, 120);
+        crearDiscoLetras(document.querySelector(".interior"), ALFABETO, 95);
 
         const mensajeCifrado = decodeURIComponent(obtenerMensajeDesdeURL());
         document.getElementById('mensaje-cifrado').textContent = mensajeCifrado;

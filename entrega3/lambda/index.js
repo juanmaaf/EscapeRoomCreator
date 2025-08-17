@@ -111,37 +111,37 @@ const CargarEscapeRoomIntentHandler = {
     }
 };
 
-const IniciarPuzleActualIntentHandler = {
+const YesIntentHandler = {
     canHandle(handlerInput) {
-      const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-      const tieneJuegoCargado = !!sessionAttributes.juego;
-  
-      return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
+    const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
+    const tieneJuegoCargado = !!sessionAttributes.juego;
+
+    return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
         && Alexa.getIntentName(handlerInput.requestEnvelope) === 'IniciarPuzleActual'
         && tieneJuegoCargado;
     },
     handle(handlerInput) {
-      const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-      const puzleActual = sessionAttributes.puzleActual || 0;
-      const puzle = sessionAttributes.juego.puzles[puzleActual];
+    const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
+    const puzleActual = sessionAttributes.puzleActual || 0;
+    const puzle = sessionAttributes.juego.puzles[puzleActual];
 
-      sessionAttributes.puzleIniciado = true;
-      handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
-  
-      const speakOutput = `Aquí está tu desafío actual: ${puzle.instruccion}`;
-  
-      return handlerInput.responseBuilder
+    sessionAttributes.puzleIniciado = true;
+    handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
+
+    const speakOutput = `Aquí está tu desafío actual: ${puzle.instruccion}`;
+
+    return handlerInput.responseBuilder
         .speak(speakOutput)
         .reprompt('¿Cuál es tu respuesta?')
         .addDirective({
-          type: 'Alexa.Presentation.HTML.HandleMessage',
-          message: {
+        type: 'Alexa.Presentation.HTML.HandleMessage',
+        message: {
             action: "mostrar_puzle",
             datos: puzle.datos,
             tipo: puzle.tipo,
             instruccion: puzle.instruccion,
             tiempoMaximo: puzle.tiempoEstimadoSegundos
-          }
+        }
         })
         .getResponse();
     }
@@ -215,7 +215,7 @@ const ResolverPuzleIntentHandler = {
                     };
                 }
             } else if (sessionAttributes.fallosPuzle >= 3) {
-                speakOutput = `No es correcto. Avanzamos al siguiente desafío, pero recuerda, tu tiempo se verá penalizado.`;
+                speakOutput = `No es correcto. Con 3 fallos pasamos al siguiente desafío con penalización ¿Quieres continuar?.`;
                 sessionAttributes.puzleActual = puzleActualIndex + 1;
                 sessionAttributes.puzleIniciado = false;
                 sessionAttributes.fallosPuzle = 0;
@@ -282,7 +282,7 @@ exports.handler = Alexa.SkillBuilders.custom()
     .addRequestHandlers(
         LaunchRequestHandler,
         CargarEscapeRoomIntentHandler,
-        IniciarPuzleActualIntentHandler,
+        YesIntentHandler,
         IntentSinJuegoHandler,
         ResolverPuzleIntentHandler,
         CancelAndStopIntentHandler,
