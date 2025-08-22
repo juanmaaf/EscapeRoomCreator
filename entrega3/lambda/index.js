@@ -2,82 +2,171 @@ const Alexa = require('ask-sdk-core');
 const fs = require('fs');
 const path = require('path');
 
-function tienePantalla(handlerInput) {
-    return !!Alexa.getSupportedInterfaces(handlerInput.requestEnvelope)['Alexa.Presentation.HTML'];
+/* ===================== HELPERS ===================== */
+
+// Avanza al siguiente puzle y deja el estado listo para pedir "sí" del usuario.
+function avanzarPuzle(sessionAttributes) {
+  sessionAttributes.puzleActual += 1;
+  sessionAttributes.puzleIniciado = false;
+  sessionAttributes.puzleTiempoActivo = false;
+  sessionAttributes.fallosPuzle = 0;
 }
+
+// ¿Ya terminó el juego?
+function juegoTerminado(sessionAttributes) {
+  const juego = sessionAttributes.juego;
+  return !juego || sessionAttributes.puzleActual >= juego.puzles.length;
+}
+
+// Finaliza juego con mensaje estándar
+function finalizarJuego(handlerInput) {
+  const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
+  sessionAttributes.juego = null;
+  sessionAttributes.puzleActual = null;
+  handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
+
+  return handlerInput.responseBuilder
+    .speak('¡Has completado todos los desafíos! ¡Felicidades, has terminado el juego!')
+    .withShouldEndSession(true)
+    .getResponse();
+}
+
+// Normaliza string (minúsculas, sin acentos)
+function normalizar(s) {
+  return (s || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+// Obtiene el puzle actual (o null si no hay)
+function getPuzleActual(sessionAttributes) {
+  const juego = sessionAttributes.juego;
+  const idx = sessionAttributes.puzleActual || 0;
+  if (!juego || !juego.puzles || idx >= juego.puzles.length) return null;
+  return juego.puzles[idx];
+}
+
+// Comprueba si el dispositivo tiene pantalla HTML
+function tienePantalla(handlerInput) {
+  return !!Alexa.getSupportedInterfaces(handlerInput.requestEnvelope)['Alexa.Presentation.HTML'];
+}
+
+// Inicia (muestra) el puzle actual: marca flags y envía la directiva a HTML
+function iniciarPuzleActual(handlerInput) {
+  const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
+  const puzle = getPuzleActual(sessionAttributes);
+
+  if (!puzle) {
+    return finalizarJuego(handlerInput);
+  }
+
+  sessionAttributes.puzleIniciado = true;
+  sessionAttributes.puzleTiempoActivo = true; // clave para permitir ResolverPuzle
+  handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
+
+  const response = handlerInput.responseBuilder
+    .speak(`Aquí está tu desafío: ${puzle.instruccion}`)
+    .reprompt('¿Cuál es tu respuesta?');
+
+  if (tienePantalla(handlerInput)) {
+    response.addDirective({
+      type: 'Alexa.Presentation.HTML.HandleMessage',
+      message: {
+        action: "mostrar_puzle",
+        datos: puzle.datos,
+        tipo: puzle.tipo,
+        instruccion: puzle.instruccion,
+        tiempoMaximo: puzle.tiempoEstimadoSegundos
+      }
+    });
+  }
+
+  return response.getResponse();
+}
+
+// Cuando termina un puzle (correcto/tiempo/skip), dejamos preparado para “sí”
+function pedirContinuar(handlerInput, texto) {
+  const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
+  // En este punto ya hemos hecho avanzarPuzle() o marcado el fin
+  if (juegoTerminado(sessionAttributes)) {
+    return finalizarJuego(handlerInput);
+  }
+  return handlerInput.responseBuilder
+    .speak(`${texto} ¿Quieres continuar con el siguiente desafío? Di "sí" para continuar.`)
+    .reprompt('¿Quieres continuar?')
+    .getResponse();
+}
+
+/* ===================== CARGA JUEGOS ===================== */
 
 let juegos = [];
 try {
-    const data = fs.readFileSync(path.resolve(__dirname, 'juegos.json'), 'utf8');
-    juegos = JSON.parse(data);
-    console.log(`Cargados ${juegos.length} juegos desde juegos.json`);
+  const data = fs.readFileSync(path.resolve(__dirname, 'juegos.json'), 'utf8');
+  juegos = JSON.parse(data);
+  console.log(`Cargados ${juegos.length} juegos desde juegos.json`);
 } catch (error) {
-    console.error('Error leyendo juegos.json:', error);
+  console.error('Error leyendo juegos.json:', error);
 }
+
+/* ===================== HANDLERS ===================== */
 
 const LaunchRequestHandler = {
     canHandle(handlerInput) {
-        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'LaunchRequest';
+      return Alexa.getRequestType(handlerInput.requestEnvelope) === 'LaunchRequest';
     },
     handle(handlerInput) {
-        const speakOutput = '¡Bienvenido a <lang xml:lang="en-US">Escape Room Creator</lang>! Puedes decir: "cargar juego número..." para cargar un juego. También puedes decir "salir del juego" para abandonar.';
-
-        if (tienePantalla(handlerInput)) {
-            return handlerInput.responseBuilder
-                .speak(speakOutput)
-                .reprompt('¿Qué quieres hacer? Puedes decir "cargar juego número..." para cargar un juego.')
-                .addDirective({
-                    type: "Alexa.Presentation.HTML.Start",
-                    data: {},
-                    request: {
-                        uri: "https://d1qeen6fmshz39.cloudfront.net/entrega3/index.html",
-                        method: "GET",
-                    },
-                    configuration: {
-                        timeoutInSeconds: 300
-                    }
-                })
-                .getResponse();
-        } else {
-            return handlerInput.responseBuilder
-                .speak('Esta experiencia solo está disponible en dispositivos con pantalla como Echo Show.')
-                .withShouldEndSession(true)
-                .getResponse();
-        }
+      const speakOutput = '¡Bienvenido a <lang xml:lang="en-US">Escape Room Creator</lang>! Puedes decir: "cargar juego número..." para cargar un juego. También puedes decir "salir del juego" para abandonar.';
+  
+      if (tienePantalla(handlerInput)) {
+        return handlerInput.responseBuilder
+          .speak(speakOutput)
+          .reprompt('¿Qué quieres hacer? Puedes decir "cargar juego número..." para cargar un juego.')
+          .addDirective({
+            type: "Alexa.Presentation.HTML.Start",
+            data: {},
+            request: {
+              uri: "https://d1qeen6fmshz39.cloudfront.net/entrega3/index.html",
+              method: "GET",
+            },
+            configuration: { timeoutInSeconds: 300 }
+          })
+          .getResponse();
+      } else {
+        return handlerInput.responseBuilder
+          .speak('Esta experiencia solo está disponible en dispositivos con pantalla como Echo Show.')
+          .withShouldEndSession(true)
+          .getResponse();
+      }
     }
-};
-
-const IntentSinJuegoHandler = {
-  canHandle(handlerInput) {
+  };
+  
+  const IntentSinJuegoHandler = {
+    canHandle(handlerInput) {
       const intentName = Alexa.getIntentName(handlerInput.requestEnvelope);
       const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
       const tieneJuegoCargado = !!sessionAttributes.juego;
       const puzleEmpezado = sessionAttributes.puzleIniciado === true;
-
-      return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' &&
-          (
-              (intentName === 'AMAZON.YesIntent' && !tieneJuegoCargado) ||
-              (intentName === 'ResolverPuzle' && (!tieneJuegoCargado || !puzleEmpezado))
-          );
-  },
-  handle(handlerInput) {
+  
+      return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' && (
+        (intentName === 'AMAZON.YesIntent' && !tieneJuegoCargado) ||
+        (intentName === 'ResolverPuzle' && (!tieneJuegoCargado || !puzleEmpezado))
+      );
+    },
+    handle(handlerInput) {
       const intentName = Alexa.getIntentName(handlerInput.requestEnvelope);
-      let speakOutput = '';
-
-      if (intentName === 'AMAZON.YesIntent') {
-          speakOutput = `No hay ningún juego cargado actualmente. Puedes decir "cargar juego número..." para empezar un juego.`;
-      } else if (intentName === 'ResolverPuzle') {
-          speakOutput = `No hay ningún desafío iniciado. Primero debes iniciar un puzle antes de intentar resolverlo.`;
-      }
-
+      const speakOutput = (intentName === 'AMAZON.YesIntent')
+        ? 'No hay ningún juego cargado actualmente. Puedes decir "cargar juego número..." para empezar un juego.'
+        : 'No hay ningún desafío iniciado. Primero debes iniciar un puzle antes de intentar resolverlo.';
+  
       return handlerInput.responseBuilder
-          .speak(speakOutput)
-          .reprompt('Puedes decir "cargar juego número..." para iniciar un juego.')
-          .getResponse();
-  }
-};
-
-const CargarEscapeRoomIntentHandler = {
+        .speak(speakOutput)
+        .reprompt('Puedes decir "cargar juego número..." para iniciar un juego.')
+        .getResponse();
+    }
+  };
+  
+  const CargarEscapeRoomIntentHandler = {
     canHandle(handlerInput) {
       return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
         && Alexa.getIntentName(handlerInput.requestEnvelope) === 'CargarEscapeRoom';
@@ -85,33 +174,35 @@ const CargarEscapeRoomIntentHandler = {
     handle(handlerInput) {
       const idJuego = Alexa.getSlotValue(handlerInput.requestEnvelope, 'idJuego');
       const juego = juegos.find(j => j.id === Number(idJuego));
-
+  
       if (!juego) {
         return handlerInput.responseBuilder
           .speak(`No encontré ningún juego con el número ${idJuego}. Inténtalo otra vez.`)
           .reprompt('Por favor, dime el número del juego que quieres cargar.')
           .getResponse();
       }
-
+  
       const speakOutput = `<speak>
         Cargando juego número ${idJuego}.<break time="3s"/>
         ${juego.narrativa}
       </speak>`;
-
+  
       const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
       sessionAttributes.juego = juego;
       sessionAttributes.puzleActual = 0;
       sessionAttributes.puzleIniciado = false;
+      sessionAttributes.puzleTiempoActivo = false;
+      sessionAttributes.fallosPuzle = 0;
       handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
-
+  
       return handlerInput.responseBuilder
         .speak(speakOutput)
-        .reprompt('¿Quieres empezar los desafíos? Dí Sí para continuar')
+        .reprompt('¿Quieres empezar los desafíos? Di "sí" para continuar')
         .getResponse();
     }
-};
-
-const YesIntentHandler = {
+  };
+  
+  const YesIntentHandler = {
     canHandle(handlerInput) {
       const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
       const tieneJuegoCargado = !!sessionAttributes.juego;
@@ -124,202 +215,177 @@ const YesIntentHandler = {
       const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
       const puzleIniciado = sessionAttributes.puzleIniciado === true;
   
+      // Si ya está en curso, no reiniciar
       if (puzleIniciado) {
-        const speakOutput = 'Ya tienes un desafío en curso. Dime tu respuesta';
         return handlerInput.responseBuilder
-          .speak(speakOutput)
+          .speak('Ya tienes un desafío en curso. Dime tu respuesta')
           .reprompt('¿Cuál es tu respuesta?')
           .getResponse();
       }
-
-      const puzleActual = sessionAttributes.puzleActual || 0;
-      const puzle = sessionAttributes.juego.puzles[puzleActual];
   
-      sessionAttributes.puzleIniciado = true;
-      handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
+      // Si terminó el juego
+      if (juegoTerminado(sessionAttributes)) {
+        return finalizarJuego(handlerInput);
+      }
   
-      const speakOutput = `Aquí está tu desafío actual: ${puzle.instruccion}`;
+      // Iniciar/mostrar el puzle actual
+      return iniciarPuzleActual(handlerInput);
+    }
+  };
   
-      return handlerInput.responseBuilder
-        .speak(speakOutput)
-        .reprompt('¿Cuál es tu respuesta?')
-        .addDirective({
-          type: 'Alexa.Presentation.HTML.HandleMessage',
-          message: {
-            action: "mostrar_puzle",
-            datos: puzle.datos,
-            tipo: puzle.tipo,
-            instruccion: puzle.instruccion,
-            tiempoMaximo: puzle.tiempoEstimadoSegundos
+  const ResolverPuzleIntentHandler = {
+    canHandle(handlerInput) {
+      const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
+      const juegoCargado = !!sessionAttributes.juego;
+      const puzleEmpezado = sessionAttributes.puzleIniciado === true;
+      const tiempoActivo = sessionAttributes.puzleTiempoActivo === true;
+  
+      return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
+        && Alexa.getIntentName(handlerInput.requestEnvelope) === 'ResolverPuzle'
+        && juegoCargado
+        && puzleEmpezado
+        && tiempoActivo;
+    },
+  
+    handle(handlerInput) {
+      const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
+      const juego = sessionAttributes.juego;
+      const puzle = getPuzleActual(sessionAttributes);
+  
+      if (!puzle) {
+        return finalizarJuego(handlerInput);
+      }
+  
+      // Inicializamos contador de fallos por puzle
+      sessionAttributes.fallosPuzle = sessionAttributes.fallosPuzle || 0;
+  
+      const slotValor = Alexa.getSlotValue(handlerInput.requestEnvelope, 'respuestaUsuario') || '';
+      const respuestaUsuario = normalizar(slotValor);
+  
+      const respuestasCorrectas = (puzle.respuestaCorrecta || []).map(normalizar);
+  
+      let speakOutput = '';
+      let addDirective = null;
+  
+      if (respuestasCorrectas.includes(respuestaUsuario)) {
+        // Correcto → avanzar y pedir “sí”
+        avanzarPuzle(sessionAttributes);
+        handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
+        return pedirContinuar(handlerInput, '¡Correcto!');
+      } else {
+        // Incorrecto → pista / reintento / avanzar por máximo de fallos
+        sessionAttributes.fallosPuzle += 1;
+        handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
+  
+        const maxFallos = juego.fallosMaximosPuzle;
+        const numPistas = (puzle.pistas || []).length;
+        const falloActual = sessionAttributes.fallosPuzle;
+  
+        if (falloActual <= numPistas) {
+          speakOutput = `No es correcto. ${puzle.pistas[falloActual - 1]}`;
+          if (tienePantalla(handlerInput)) {
+            addDirective = {
+              type: 'Alexa.Presentation.HTML.HandleMessage',
+              message: { action: 'mostrar_pista', pista: puzle.pistas[falloActual - 1] }
+            };
           }
-        })
+        } else if (falloActual < maxFallos) {
+          speakOutput = 'Prueba otra vez.';
+        } else {
+          // Máximo de fallos → avanzar y pedir “sí”
+          avanzarPuzle(sessionAttributes);
+          handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
+          return pedirContinuar(handlerInput, 'Has alcanzado el máximo de intentos de este desafío. Pasamos al siguiente.');
+        }
+      }
+  
+      const responseBuilder = handlerInput.responseBuilder
+        .speak(speakOutput)
+        .reprompt('¿Cuál es tu respuesta?');
+  
+      if (addDirective) responseBuilder.addDirective(addDirective);
+  
+      return responseBuilder.getResponse();
+    }
+  };
+  
+  const HTMLMessageHandler = {
+    canHandle(handlerInput) {
+      return Alexa.getRequestType(handlerInput.requestEnvelope) === 'Alexa.Presentation.HTML.Message';
+    },
+    handle(handlerInput) {
+      const message = handlerInput.requestEnvelope.request.message;
+  
+      if (message.action === "tiempo_acabado") {
+        const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
+  
+        // Tiempo agotado → cerrar estado del puzle y avanzar
+        sessionAttributes.puzleIniciado = false;
+        sessionAttributes.puzleTiempoActivo = false;
+        sessionAttributes.fallosPuzle = 0;
+        avanzarPuzle(sessionAttributes);
+        handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
+  
+        // Pedir confirmación para continuar o finalizar si no hay más
+        return pedirContinuar(handlerInput, '¡Se acabó el tiempo!');
+      }
+  
+      return handlerInput.responseBuilder.getResponse();
+    }
+  };
+  
+  const FallbackIntentHandler = {
+    canHandle(handlerInput) {
+      return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
+        && Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.FallbackIntent';
+    },
+    handle(handlerInput) {
+      return handlerInput.responseBuilder
+        .speak('No he entendido eso. Por favor, usa la pantalla para interactuar con el juego.')
+        .withShouldEndSession(false)
         .getResponse();
     }
-};
-
-const ResolverPuzleIntentHandler = {
+  };
+  
+  const CancelAndStopIntentHandler = {
     canHandle(handlerInput) {
-        const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-        const juegoCargado = !!sessionAttributes.juego;
-        const puzleEmpezado = sessionAttributes.puzleIniciado === true;
-
-        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
-            && Alexa.getIntentName(handlerInput.requestEnvelope) === 'ResolverPuzle'
-            && juegoCargado
-            && puzleEmpezado;
-    },
-
-    handle(handlerInput) {
-        const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-        const puzleActualIndex = sessionAttributes.puzleActual;
-        const juego = sessionAttributes.juego;
-        const puzle = juego.puzles[puzleActualIndex];
-
-        // Inicializamos contador de fallos por puzzle
-        sessionAttributes.fallosPuzle = sessionAttributes.fallosPuzle || 0;
-
-        const respuestaUsuario = (handlerInput.requestEnvelope.request.intent.slots.respuestaUsuario.value || '')
-            .toLowerCase()
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '');
-
-        const respuestasCorrectas = puzle.respuestaCorrecta.map(r =>
-            r.toLowerCase()
-             .normalize('NFD')
-             .replace(/[\u0300-\u036f]/g, '')
+      return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
+        && (
+          Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.CancelIntent' ||
+          Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.StopIntent'
         );
-
-        let speakOutput = '';
-        let addDirective = null;
-
-        if (respuestasCorrectas.includes(respuestaUsuario)) {
-            // Respuesta correcta
-            sessionAttributes.puzleActual += 1;
-            sessionAttributes.puzleIniciado = false;
-            sessionAttributes.fallosPuzle = 0;
-            handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
-
-            if (sessionAttributes.puzleActual >= juego.puzles.length) {
-                // Fin del juego
-                sessionAttributes.juego = null;
-                sessionAttributes.puzleActual = null;
-                handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
-
-                return handlerInput.responseBuilder
-                    .speak('¡Correcto! Has completado todos los desafíos. ¡Felicidades, has terminado el juego!')
-                    .withShouldEndSession(true)
-                    .getResponse();
-            } else {
-                speakOutput = '¡Correcto! ¿Quieres continuar con el siguiente desafío? Di "sí" para continuar.';
-            }
-        } else {
-            sessionAttributes.fallosPuzle += 1;
-            handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
-        
-            const maxFallos = juego.fallosMaximosPuzle;
-            const numPistas = puzle.pistas.length;
-            const falloActual = sessionAttributes.fallosPuzle;
-        
-            if (falloActual <= numPistas) {
-                speakOutput = `No es correcto. ${puzle.pistas[falloActual - 1]}`;
-                if (tienePantalla(handlerInput)) {
-                    addDirective = {
-                        type: 'Alexa.Presentation.HTML.HandleMessage',
-                        message: { action: 'mostrar_pista', pista: puzle.pistas[falloActual - 1] }
-                    };
-                }
-            } else if (falloActual < maxFallos) {
-                speakOutput = 'Prueba otra vez.';
-            } else {
-                speakOutput = `Has alcanzado el máximo de intentos de este desafío. Pasamos al siguiente. ¿Quieres continuar?`;
-                sessionAttributes.puzleActual += 1;
-                sessionAttributes.puzleIniciado = false;
-                sessionAttributes.fallosPuzle = 0;
-                handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
-            }
-        }
-
-        const responseBuilder = handlerInput.responseBuilder
-            .speak(speakOutput)
-            .reprompt(puzle.instruccion);
-
-        if (addDirective) responseBuilder.addDirective(addDirective);
-
-        return responseBuilder.getResponse();
-    }
-};
-
-const HTMLMessageHandler = {
-    canHandle(handlerInput) {
-        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'Alexa.Presentation.HTML.Message';
     },
     handle(handlerInput) {
-        const message = handlerInput.requestEnvelope.request.message;
-
-        if (message.action === "tiempo_acabado") {
-            return handlerInput.responseBuilder
-                .speak("¡Se acabó el tiempo! Pasamos al siguiente desafío. ¿Quieres continuar? Di sí para continuar.")
-                .reprompt("¿Quieres continuar?")
-                .getResponse();
-        }
-
-        return handlerInput.responseBuilder.getResponse();
+      return handlerInput.responseBuilder
+        .speak('Adiós, espero que vuelvas a intentarlo pronto.')
+        .withShouldEndSession(true)
+        .getResponse();
     }
-};
-
-const FallbackIntentHandler = {
+  };
+  
+  const HelpIntentHandler = {
     canHandle(handlerInput) {
-        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
-            && Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.FallbackIntent';
+      return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
+        && Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.HelpIntent';
     },
     handle(handlerInput) {
-        const speakOutput = 'No he entendido eso. Por favor, usa la pantalla para interactuar con el juego.';
-        return handlerInput.responseBuilder
-            .speak(speakOutput)
-            .withShouldEndSession(false)
-            .getResponse();
+      return handlerInput.responseBuilder
+        .speak('Para jugar, utiliza la pantalla para interactuar con el juego. Si quieres salir, di "salir del juego".')
+        .reprompt('¿Qué quieres hacer?')
+        .getResponse();
     }
-};
-
-const CancelAndStopIntentHandler = {
-    canHandle(handlerInput) {
-        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
-            && (Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.CancelIntent'
-                || Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.StopIntent');
-    },
-    handle(handlerInput) {
-        const speakOutput = 'Adiós, espero que vuelvas a intentarlo pronto.';
-        return handlerInput.responseBuilder
-            .speak(speakOutput)
-            .withShouldEndSession(true)
-            .getResponse();
-    }
-};
-
-const HelpIntentHandler = {
-    canHandle(handlerInput) {
-        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
-            && Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.HelpIntent';
-    },
-    handle(handlerInput) {
-        const speakOutput = 'Para jugar, utiliza la pantalla para interactuar con el juego. Si quieres salir, di "salir del juego".';
-        return handlerInput.responseBuilder
-            .speak(speakOutput)
-            .reprompt('¿Qué quieres hacer?')
-            .getResponse();
-    }
-};
-
-exports.handler = Alexa.SkillBuilders.custom()
+  };
+  
+  exports.handler = Alexa.SkillBuilders.custom()
     .addRequestHandlers(
-        LaunchRequestHandler,
-        CargarEscapeRoomIntentHandler,
-        YesIntentHandler,
-        IntentSinJuegoHandler,
-        ResolverPuzleIntentHandler,
-        HTMLMessageHandler,
-        CancelAndStopIntentHandler,
-        HelpIntentHandler,
-        FallbackIntentHandler
+      LaunchRequestHandler,
+      CargarEscapeRoomIntentHandler,
+      YesIntentHandler,
+      IntentSinJuegoHandler,
+      ResolverPuzleIntentHandler,
+      HTMLMessageHandler,
+      CancelAndStopIntentHandler,
+      HelpIntentHandler,
+      FallbackIntentHandler
     )
     .lambda();
