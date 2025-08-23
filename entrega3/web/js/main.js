@@ -1,28 +1,13 @@
 let alexaClient;
 let intervalContador = null;
 
-// Flag de debug: False para producción
-const DEBUG_MODE = true;
-
-function logToScreen(text) {
-    if (!DEBUG_MODE) return;
-
-    let logDiv = document.getElementById("debug-log");
-    logDiv.style.display = "block";
-    const p = document.createElement("div");
-    p.textContent = text;
-    logDiv.appendChild(p);
-    logDiv.scrollTop = logDiv.scrollHeight;
-}
-
 Alexa.create({ version: '1.1' })
     .then(({ alexa }) => {
         alexaClient = alexa;
         alexaClient.skill.onMessage(handleMessageFromSkill);
-        logToScreen("Alexa client inicializado");
     })
     .catch(error => {
-        logToScreen("Error al crear el cliente: " + error);
+        console.error("Error al crear el cliente: " + error);
     });
 
 function iniciarContador(tiempoMaximo) {
@@ -40,8 +25,6 @@ function iniciarContador(tiempoMaximo) {
             clearInterval(intervalContador);
             contadorDiv.textContent = "¡Se acabó el tiempo!";
 
-            logToScreen("Tiempo agotado → enviando mensaje a Alexa");
-
             handleMessageToSkill({ action: "tiempo_acabado" });
         } else {
             contadorDiv.textContent = `Tiempo restante: ${tiempoRestante} s`;
@@ -54,14 +37,12 @@ function mostrarPista(texto) {
     const pistaDiv = document.getElementById("pista-container");
     pistaDiv.style.display = "block";
     pistaDiv.textContent = texto;
-    logToScreen("Mostrando pista: " + texto);
 }
 
 function ocultarPista() {
     const pistaDiv = document.getElementById("pista-container");
     pistaDiv.style.display = "none";
     pistaDiv.textContent = "";
-    logToScreen("Ocultando pista");
 }
 
 // ----- Handler de mensajes desde Alexa -----
@@ -70,8 +51,6 @@ function handleMessageFromSkill(message) {
         document.addEventListener('DOMContentLoaded', () => handleMessageFromSkill(message));
         return;
     }
-
-    logToScreen("Mensaje recibido de Alexa: " + JSON.stringify(message));
 
     if (message.action === "mostrar_puzle") {
         let url = "";
@@ -100,7 +79,7 @@ function handleMessageFromSkill(message) {
                 break;
 
             default:
-                logToScreen("Tipo de puzle no reconocido: " + message.tipo);
+                console.error("Tipo de puzle no reconocido: " + message.tipo);
                 break;
         }
 
@@ -122,17 +101,16 @@ function handleMessageFromSkill(message) {
         mostrarPista(message.pista);
     } 
     else {
-        logToScreen("Acción no reconocida: " + message.action);
+        console.error("Acción no reconocida: " + message.action);
     }
 }
 
 // ----- Handler de mensajes a Alexa -----
 function handleMessageToSkill(message) {
     if (alexaClient != null) {
-        logToScreen("Enviando mensaje a Alexa: " + JSON.stringify(message));
         alexaClient.skill.sendMessage(message);
     } 
     else {
-        logToScreen("No se pudo enviar: cliente no inicializado");
+        console.error("No se pudo enviar: cliente no inicializado");
     }
 }
