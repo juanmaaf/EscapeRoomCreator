@@ -8,9 +8,7 @@ function logToScreen(text) {
     if (!DEBUG_MODE) return;
 
     let logDiv = document.getElementById("debug-log");
-    if (logDiv.style.display === "none") {
-        logDiv.style.display = "block";
-    }
+    logDiv.style.display = "block";
     const p = document.createElement("div");
     p.textContent = text;
     logDiv.appendChild(p);
