@@ -7,8 +7,14 @@ Alexa.create({ version: '1.1' })
         alexaClient.skill.onMessage(handleMessageFromSkill);
     })
     .catch(error => {
-        console.error("Error al crear el cliente: " + error);
+        logToCloudwatch("Error al crear el cliente: " + error);
     });
+
+// ----- HELPERS -----
+
+function logToCloudwatch(text) {
+    handleMessageToSkill({ action: "log_debug", message: text });
+}
 
 function iniciarContador(tiempoMaximo) {
     clearInterval(intervalContador);
@@ -25,7 +31,7 @@ function iniciarContador(tiempoMaximo) {
             clearInterval(intervalContador);
             contadorDiv.textContent = "¡Se acabó el tiempo!";
 
-            console.log("Tiempo agotado → enviando mensaje a Alexa");
+            logToCloudwatch("Tiempo agotado → enviando mensaje a Alexa");
             handleMessageToSkill({ action: "tiempo_acabado" });
         } else {
             contadorDiv.textContent = `Tiempo restante: ${tiempoRestante} s`;
@@ -38,14 +44,14 @@ function mostrarPista(texto) {
     const pistaDiv = document.getElementById("pista-container");
     pistaDiv.style.display = "block";
     pistaDiv.textContent = texto;
-    console.log("Mostrando pista: " + texto);
+    logToCloudwatch("Mostrando pista: " + texto);
 }
 
 function ocultarPista() {
     const pistaDiv = document.getElementById("pista-container");
     pistaDiv.style.display = "none";
     pistaDiv.textContent = "";
-    console.log("Ocultando pista");
+    logToCloudwatch("Ocultando pista");
 }
 
 // ----- Handler de mensajes desde Alexa -----
@@ -55,7 +61,7 @@ function handleMessageFromSkill(message) {
         return;
     }
 
-    console.log("Mensaje recibido de Alexa: " + JSON.stringify(message));
+    logToCloudwatch("Mensaje recibido de Alexa: " + JSON.stringify(message));
 
     if (message.action === "mostrar_puzle") {
         let url = "";
@@ -84,7 +90,7 @@ function handleMessageFromSkill(message) {
                 break;
 
             default:
-                console.error("Tipo de puzle no reconocido: " + message.tipo);
+                logToCloudwatch("Tipo de puzle no reconocido: " + message.tipo);
                 break;
         }
 
@@ -106,17 +112,17 @@ function handleMessageFromSkill(message) {
         mostrarPista(message.pista);
     } 
     else {
-        console.error("Acción no reconocida: " + message.action);
+        logToCloudwatch("Acción no reconocida: " + message.action);
     }
 }
 
 // ----- Handler de mensajes a Alexa -----
 function handleMessageToSkill(message) {
     if (alexaClient != null) {
-        console.error("Enviando mensaje a Alexa: " + JSON.stringify(message));
+        logToCloudwatch("Enviando mensaje a Alexa: " + JSON.stringify(message));
         alexaClient.skill.sendMessage(message);
     } 
     else {
-        console.error("No se pudo enviar: cliente no inicializado");
+        logToCloudwatch("No se pudo enviar: cliente no inicializado");
     }
 }

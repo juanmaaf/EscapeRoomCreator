@@ -311,10 +311,16 @@ const LaunchRequestHandler = {
   
   const HTMLMessageHandler = {
     canHandle(handlerInput) {
-      return Alexa.getRequestType(handlerInput.requestEnvelope) === 'Alexa.Presentation.HTML.Message';
+      return Alexa.getRequestType(handlerInput.requestEnvelope) === "Alexa.Presentation.HTML.Message";
     },
     handle(handlerInput) {
       const message = handlerInput.requestEnvelope.request.message;
+
+      console.log("Evento HTML recibido:", JSON.stringify(handlerInput.requestEnvelope, null, 2));
+
+      if (message.action === "log_debug") {
+        console.log("[FRONTEND DEBUG]", message.message);
+      }
   
       if (message.action === "tiempo_acabado") {
         const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
