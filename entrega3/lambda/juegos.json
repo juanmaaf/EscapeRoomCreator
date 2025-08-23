@@ -43,6 +43,7 @@
         ]
       }
     ],
-    "fallosMaximosPuzle": 4
+    "fallosMaximosPuzle": 4,
+    "tipo_portada": "hab_oscura"
   }
 ]
