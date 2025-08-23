@@ -13,9 +13,12 @@ Alexa.create({ version: '1.1' })
 // ----- HELPERS -----
 
 function logToCloudwatch(text) {
-    if (alexaClient != null) {
-        alexaClient.skill.sendMessage({ action: "log_debug", message: text });
-    } 
+    handleMessageToSkill({ action: "log_debug", message: text });
+}
+
+// Mensaje de tiempo agotado
+function tiempoAgotado() {
+    handleMessageToSkill({ action: "tiempo_acabado" });
 }
 
 function iniciarContador(tiempoMaximo) {
@@ -34,7 +37,7 @@ function iniciarContador(tiempoMaximo) {
             contadorDiv.textContent = "¡Se acabó el tiempo!";
 
             logToCloudwatch("Tiempo agotado → enviando mensaje a Alexa");
-            handleMessageToSkill({ action: "tiempo_acabado" });
+            tiempoAgotado();
         } else {
             contadorDiv.textContent = `Tiempo restante: ${tiempoRestante} s`;
         }
@@ -118,11 +121,19 @@ function handleMessageFromSkill(message) {
 
 // ----- Handler de mensajes a Alexa -----
 function handleMessageToSkill(message) {
-    if (alexaClient != null) {
-        logToCloudwatch("Enviando mensaje a Alexa: " + JSON.stringify(message));
-        alexaClient.skill.sendMessage(message);
-    } 
-    else {
-        logToCloudwatch("No se pudo enviar: cliente no inicializado");
-    }
+    if (!alexaClient) return;
+
+    const trySend = () => {
+        try {
+            alexaClient.skill.sendMessage(message, (result) => {
+                if (!result || result.statusCode !== 200) {
+                    setTimeout(trySend, 500); // reintentar medio segundo después
+                }
+            });
+        } catch (err) {
+            setTimeout(trySend, 500); // reintentar si lanza excepción
+        }
+    };
+
+    trySend();
 }
