@@ -113,7 +113,26 @@ function handleMessageFromSkill(message) {
     } 
     else if (message.action === "mostrar_pista") {
         mostrarPista(message.pista);
-    } 
+    }
+    else if (message.action === "mostrar_portada") {
+        const tipo = message.tipo || 'default';
+        const urlImagen = `https://d1qeen6fmshz39.cloudfront.net/entrega3/portadas_base/${tipo}.jpg`;
+
+        document.getElementById('iframe-container').innerHTML = `
+            <img src="${urlImagen}" alt="${tipo}"
+             style="
+               max-width: 95vw;
+               max-height: 90vh;
+               width: auto;
+               height: auto;
+               object-fit: contain;
+               border-radius: 10px;
+               display: block;
+               margin: auto;
+             "
+            />
+        `;
+    }
     else {
         logToCloudwatch("Acción no reconocida: " + message.action);
     }

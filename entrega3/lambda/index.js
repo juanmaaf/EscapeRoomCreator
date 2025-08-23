@@ -181,8 +181,7 @@ const CargarEscapeRoomIntentHandler = {
         .reprompt('Por favor, dime el número del juego que quieres cargar.')
         .getResponse();
     }
-
-    const speakOutput = `<speak>Cargando juego número ${idJuego}.<break time="3s"/>${juego.narrativa}</speak>`;
+    
     const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
     sessionAttributes.juego = juego;
     sessionAttributes.puzleActual = 0;
@@ -191,9 +190,20 @@ const CargarEscapeRoomIntentHandler = {
     sessionAttributes.fallosPuzle = 0;
     handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
 
+    const speakOutput = `<speak>Cargando juego número ${idJuego}.<break time="3s"/>${juego.narrativa}</speak>`;
+
+    const mostrarPortadaDirective = {
+      type: 'Alexa.Presentation.HTML.HandleMessage',
+      message: {
+        action: 'mostrar_portada',
+        tipo: juego.tipo_portada
+      }
+    };
+
     return handlerInput.responseBuilder
       .speak(speakOutput)
       .reprompt('¿Quieres empezar los desafíos? Di "sí" para continuar')
+      .addDirective(mostrarPortadaDirective)
       .getResponse();
   }
 };
@@ -287,7 +297,7 @@ const ProcessHTMLMessageHandler = {
     const request = Alexa.getRequest(handlerInput.requestEnvelope);
     const message = request.message;
 
-    console.log("Evento HTML recibido:", JSON.stringify(handlerInput.requestEnvelope, null, 2));
+    console.log("[FRONTEND] Mensaje recibido:", JSON.stringify(message, null, 2));
 
     if (message.action === "log_debug") console.log("[FRONTEND DEBUG]", message.message);
     if (message.action === "tiempo_acabado") {
