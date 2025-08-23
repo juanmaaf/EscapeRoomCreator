@@ -25,6 +25,7 @@ function iniciarContador(tiempoMaximo) {
             clearInterval(intervalContador);
             contadorDiv.textContent = "¡Se acabó el tiempo!";
 
+            console.log("Tiempo agotado → enviando mensaje a Alexa");
             handleMessageToSkill({ action: "tiempo_acabado" });
         } else {
             contadorDiv.textContent = `Tiempo restante: ${tiempoRestante} s`;
@@ -37,12 +38,14 @@ function mostrarPista(texto) {
     const pistaDiv = document.getElementById("pista-container");
     pistaDiv.style.display = "block";
     pistaDiv.textContent = texto;
+    console.log("Mostrando pista: " + texto);
 }
 
 function ocultarPista() {
     const pistaDiv = document.getElementById("pista-container");
     pistaDiv.style.display = "none";
     pistaDiv.textContent = "";
+    console.log("Ocultando pista");
 }
 
 // ----- Handler de mensajes desde Alexa -----
@@ -51,6 +54,8 @@ function handleMessageFromSkill(message) {
         document.addEventListener('DOMContentLoaded', () => handleMessageFromSkill(message));
         return;
     }
+
+    console.log("Mensaje recibido de Alexa: " + JSON.stringify(message));
 
     if (message.action === "mostrar_puzle") {
         let url = "";
@@ -108,6 +113,7 @@ function handleMessageFromSkill(message) {
 // ----- Handler de mensajes a Alexa -----
 function handleMessageToSkill(message) {
     if (alexaClient != null) {
+        console.error("Enviando mensaje a Alexa: " + JSON.stringify(message));
         alexaClient.skill.sendMessage(message);
     } 
     else {
