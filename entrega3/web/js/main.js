@@ -13,7 +13,9 @@ Alexa.create({ version: '1.1' })
 // ----- HELPERS -----
 
 function logToCloudwatch(text) {
-    handleMessageToSkill({ action: "log_debug", message: text });
+    if (alexaClient != null) {
+        alexaClient.skill.sendMessage({ action: "log_debug", message: text });
+    } 
 }
 
 function iniciarContador(tiempoMaximo) {
@@ -60,8 +62,6 @@ function handleMessageFromSkill(message) {
         document.addEventListener('DOMContentLoaded', () => handleMessageFromSkill(message));
         return;
     }
-
-    logToCloudwatch("Mensaje recibido de Alexa: " + JSON.stringify(message));
 
     if (message.action === "mostrar_puzle") {
         let url = "";
