@@ -95,7 +95,6 @@ function mostrarFormularioAlumno() {
             curso: document.getElementById("cursoAlumno").value,
             grupo: document.getElementById("grupoAlumno").value
         };
-        logToCloudwatch("Intentando login de alumno: " + JSON.stringify(alumno));
         handleMessageToSkill({ action: "login_alumno", datos: alumno });
     };
 }
@@ -120,7 +119,6 @@ function mostrarFormularioProfesor() {
             usuario: document.getElementById("usuarioProfesor").value,
             password: document.getElementById("passwordProfesor").value
         };
-        logToCloudwatch("Intentando login de profesor: " + JSON.stringify({ usuario: profesor.usuario }));
         handleMessageToSkill({ action: "login_profesor", datos: profesor });
     };
 }
@@ -147,7 +145,6 @@ function mostrarRegistroProfesor() {
             usuario: document.getElementById("usuarioNuevo").value,
             password: document.getElementById("passwordNuevo").value
         };
-        logToCloudwatch("Intentando registro de profesor: " + JSON.stringify({ nombre: profesor.nombre, usuario: profesor.usuario }));
         handleMessageToSkill({ action: "registrar_profesor", datos: profesor });
         mostrarMenuInicial();
     };
