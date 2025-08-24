@@ -1,6 +1,8 @@
 let alexaClient;
 let intervalContador = null;
 
+/* ===================== CREACIÓN CLIENTE ALEXA ===================== */
+
 Alexa.create({ version: '1.1' })
     .then(({ alexa }) => {
         alexaClient = alexa;
@@ -10,7 +12,7 @@ Alexa.create({ version: '1.1' })
         logToCloudwatch("Error al crear el cliente: " + error);
     });
 
-// ----- HELPERS -----
+/* ===================== HELPERS ===================== */
 
 function logToCloudwatch(text) {
     handleMessageToSkill({ action: "log_debug", message: text });
@@ -21,6 +23,7 @@ function tiempoAgotado() {
     handleMessageToSkill({ action: "tiempo_acabado" });
 }
 
+// Temporizador puzles
 function iniciarContador(tiempoMaximo) {
     clearInterval(intervalContador);
 
@@ -44,15 +47,34 @@ function iniciarContador(tiempoMaximo) {
     }, 1000);
 }
 
+// Mostrar pista en pantalla
+function mostrarPista(texto) {
+    const pistaDiv = document.getElementById("pista-container");
+    pistaDiv.style.display = "block";
+    pistaDiv.textContent = texto;
+    logToCloudwatch("Mostrando pista: " + texto);
+}
+
+// Eliminar pista de la pantalla
+function ocultarPista() {
+    const pistaDiv = document.getElementById("pista-container");
+    pistaDiv.style.display = "none";
+    pistaDiv.textContent = "";
+    logToCloudwatch("Ocultando pista");
+}
+
+/* ===================== REGISTRO/LOGIN USUARIOS ===================== */
+
+// Formulario alumno -> Únicamente login sencillo
 function mostrarFormularioAlumno() {
-    document.getElementById("iframe-container").innerHTML = `
+    document.getElementById("menu-inicial").innerHTML = `
       <form id="form-alumno">
-        <label>Nombre:</label><br>
-        <input type="text" id="nombreAlumno" required><br>
-        <label>Curso:</label><br>
-        <input type="text" id="cursoAlumno" required><br>
-        <label>Grupo:</label><br>
-        <input type="text" id="grupoAlumno" required><br>
+        <label>Nombre:</label>
+        <input type="text" id="nombreAlumno" required>
+        <label>Curso:</label>
+        <input type="text" id="cursoAlumno" required>
+        <label>Grupo:</label>
+        <input type="text" id="grupoAlumno" required>
         <button type="submit">Entrar</button>
       </form>
     `;
@@ -68,13 +90,14 @@ function mostrarFormularioAlumno() {
     };
 }
 
+// Formulario profesor -> Login con usuario y contraseña
 function mostrarFormularioProfesor() {
-    document.getElementById("iframe-container").innerHTML = `
+    document.getElementById("menu-inicial").innerHTML = `
       <form id="form-profesor">
-        <label>Usuario:</label><br>
-        <input type="text" id="usuarioProfesor" required><br>
-        <label>Contraseña:</label><br>
-        <input type="password" id="passwordProfesor" required><br>
+        <label>Usuario:</label>
+        <input type="text" id="usuarioProfesor" required>
+        <label>Contraseña:</label>
+        <input type="password" id="passwordProfesor" required>
         <button type="submit">Entrar</button>
         <button type="button" onclick="mostrarRegistroProfesor()">Registrarse</button>
       </form>
@@ -90,15 +113,16 @@ function mostrarFormularioProfesor() {
     };
 }
 
+// Formulario profesor -> Registro con nombre, usuario y contraseña
 function mostrarRegistroProfesor() {
-    document.getElementById("iframe-container").innerHTML = `
+    document.getElementById("menu-inicial").innerHTML = `
       <form id="registro-profesor">
-        <label>Nombre:</label><br>
-        <input type="text" id="nombreProfesor" required><br>
-        <label>Usuario:</label><br>
-        <input type="text" id="usuarioNuevo" required><br>
-        <label>Contraseña:</label><br>
-        <input type="password" id="passwordNuevo" required><br>
+        <label>Nombre:</label>
+        <input type="text" id="nombreProfesor" required>
+        <label>Usuario:</label>
+        <input type="text" id="usuarioNuevo" required>
+        <label>Contraseña:</label>
+        <input type="password" id="passwordNuevo" required>
         <button type="submit">Registrarse</button>
       </form>
     `;
@@ -114,22 +138,10 @@ function mostrarRegistroProfesor() {
     };
 }
 
-// ----- Gestión de pistas -----
-function mostrarPista(texto) {
-    const pistaDiv = document.getElementById("pista-container");
-    pistaDiv.style.display = "block";
-    pistaDiv.textContent = texto;
-    logToCloudwatch("Mostrando pista: " + texto);
-}
+/* ===================== HANDLERS ===================== */
 
-function ocultarPista() {
-    const pistaDiv = document.getElementById("pista-container");
-    pistaDiv.style.display = "none";
-    pistaDiv.textContent = "";
-    logToCloudwatch("Ocultando pista");
-}
 
-// ----- Handler de mensajes desde Alexa -----
+// Mensajes recibidos de la skill 
 function handleMessageFromSkill(message) {
     if (!document.getElementById('iframe-container')) {
         document.addEventListener('DOMContentLoaded', () => handleMessageFromSkill(message));
@@ -208,7 +220,7 @@ function handleMessageFromSkill(message) {
     }
 }
 
-// ----- Handler de mensajes a Alexa -----
+// Mensajes enviados a la skill
 function handleMessageToSkill(message) {
     if (!alexaClient) return;
 
@@ -226,3 +238,5 @@ function handleMessageToSkill(message) {
 
     trySend();
 }
+
+/* =====================  ===================== */
