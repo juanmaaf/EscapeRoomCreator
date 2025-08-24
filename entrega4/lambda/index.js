@@ -348,6 +348,14 @@ const ProcessHTMLMessageHandler = {
                             `Puedes decir: "cargar juego número..." para cargar un juego o ` +
                             `"crear nuevo juego" para crear un juego nuevo.`;
 
+            handlerInput.responseBuilder.addDirective({
+              type: 'Alexa.Presentation.HTML.HandleMessage',
+              message: { 
+                action: "login_exitoso", 
+                tipoUsuario: "profesor" 
+              }
+            });               
+
             return handlerInput.responseBuilder
               .speak(speakOutput)
               .getResponse();
@@ -398,6 +406,14 @@ const ProcessHTMLMessageHandler = {
             handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
             const speakOutput = `¡Bienvenido, ${result.nombre}! Has ingresado correctamente. ` +
               `Puedes decir: "cargar juego número..." para cargar un juego.`;
+
+            handlerInput.responseBuilder.addDirective({
+              type: 'Alexa.Presentation.HTML.HandleMessage',
+              message: { 
+                action: "login_exitoso", 
+                tipoUsuario: "alumno" 
+              }
+            }); 
 
             return handlerInput.responseBuilder
               .speak(speakOutput)

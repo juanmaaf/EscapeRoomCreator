@@ -233,6 +233,14 @@ function handleMessageFromSkill(message) {
             />
         `;
     }
+    else if (message.action === "login_exitoso") {
+        const menuDiv = document.getElementById("menu-inicial");
+        if (menuDiv) {
+          menuDiv.style.display = "none";
+        }
+    
+        logToCloudwatch(`Login exitoso como ${message.tipoUsuario} → ocultando botones`);
+    }
     else {
         logToCloudwatch("Acción no reconocida: " + message.action);
     }
