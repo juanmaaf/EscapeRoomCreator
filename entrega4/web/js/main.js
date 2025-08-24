@@ -88,6 +88,11 @@ function mostrarFormularioAlumno() {
         };
         logToCloudwatch("Intentando login de alumno: " + JSON.stringify(alumno));
         handleMessageToSkill({ action: "login_alumno", datos: alumno });
+
+        document.getElementById("menu-inicial").innerHTML = `
+            <button onclick="mostrarFormularioAlumno()">Soy Alumno</button>
+            <button onclick="mostrarFormularioProfesor()">Soy Profesor</button>
+        `;
     };
 }
 
@@ -112,6 +117,11 @@ function mostrarFormularioProfesor() {
         };
         logToCloudwatch("Intentando login de profesor: " + JSON.stringify({ usuario: profesor.usuario }));
         handleMessageToSkill({ action: "login_profesor", datos: profesor });
+
+        document.getElementById("menu-inicial").innerHTML = `
+            <button onclick="mostrarFormularioAlumno()">Soy Alumno</button>
+            <button onclick="mostrarFormularioProfesor()">Soy Profesor</button>
+        `;
     };
 }
 
@@ -138,6 +148,11 @@ function mostrarRegistroProfesor() {
         };
         logToCloudwatch("Intentando registro de profesor: " + JSON.stringify({ nombre: profesor.nombre, usuario: profesor.usuario }));
         handleMessageToSkill({ action: "registrar_profesor", datos: profesor });
+
+        document.getElementById("menu-inicial").innerHTML = `
+            <button onclick="mostrarFormularioAlumno()">Soy Alumno</button>
+            <button onclick="mostrarFormularioProfesor()">Soy Profesor</button>
+        `;
     };
 }
 
