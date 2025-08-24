@@ -23,6 +23,14 @@ function tiempoAgotado() {
     handleMessageToSkill({ action: "tiempo_acabado" });
 }
 
+// Botones iniciales login
+function mostrarMenuInicial() {
+    document.getElementById("menu-inicial").innerHTML = `
+        <button onclick="mostrarFormularioAlumno()">Soy Alumno</button>
+        <button onclick="mostrarFormularioProfesor()">Soy Profesor</button>
+    `;
+}
+
 // Temporizador puzles
 function iniciarContador(tiempoMaximo) {
     clearInterval(intervalContador);
@@ -76,6 +84,7 @@ function mostrarFormularioAlumno() {
         <label>Grupo:</label>
         <input type="text" id="grupoAlumno" required>
         <button type="submit">Entrar</button>
+        <button type="button" onclick="mostrarMenuInicial()">Volver atrás</button>
       </form>
     `;
 
@@ -88,11 +97,6 @@ function mostrarFormularioAlumno() {
         };
         logToCloudwatch("Intentando login de alumno: " + JSON.stringify(alumno));
         handleMessageToSkill({ action: "login_alumno", datos: alumno });
-
-        document.getElementById("menu-inicial").innerHTML = `
-            <button onclick="mostrarFormularioAlumno()">Soy Alumno</button>
-            <button onclick="mostrarFormularioProfesor()">Soy Profesor</button>
-        `;
     };
 }
 
@@ -106,6 +110,7 @@ function mostrarFormularioProfesor() {
         <input type="password" id="passwordProfesor" required>
         <button type="submit">Entrar</button>
         <button type="button" onclick="mostrarRegistroProfesor()">Registrarse</button>
+        <button type="button" onclick="mostrarMenuInicial()">Volver atrás</button>
       </form>
     `;
 
@@ -117,11 +122,6 @@ function mostrarFormularioProfesor() {
         };
         logToCloudwatch("Intentando login de profesor: " + JSON.stringify({ usuario: profesor.usuario }));
         handleMessageToSkill({ action: "login_profesor", datos: profesor });
-
-        document.getElementById("menu-inicial").innerHTML = `
-            <button onclick="mostrarFormularioAlumno()">Soy Alumno</button>
-            <button onclick="mostrarFormularioProfesor()">Soy Profesor</button>
-        `;
     };
 }
 
@@ -136,6 +136,7 @@ function mostrarRegistroProfesor() {
         <label>Contraseña:</label>
         <input type="password" id="passwordNuevo" required>
         <button type="submit">Registrarse</button>
+        <button type="button" onclick="mostrarMenuInicial()">Volver atrás</button>
       </form>
     `;
 
@@ -148,11 +149,7 @@ function mostrarRegistroProfesor() {
         };
         logToCloudwatch("Intentando registro de profesor: " + JSON.stringify({ nombre: profesor.nombre, usuario: profesor.usuario }));
         handleMessageToSkill({ action: "registrar_profesor", datos: profesor });
-
-        document.getElementById("menu-inicial").innerHTML = `
-            <button onclick="mostrarFormularioAlumno()">Soy Alumno</button>
-            <button onclick="mostrarFormularioProfesor()">Soy Profesor</button>
-        `;
+        mostrarMenuInicial();
     };
 }
 
