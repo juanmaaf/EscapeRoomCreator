@@ -117,8 +117,6 @@ const LaunchRequestHandler = {
     return Alexa.getRequestType(handlerInput.requestEnvelope) === 'LaunchRequest';
   },
   handle(handlerInput) {
-    const speakOutput = '¡Bienvenido a <lang xml:lang="en-US">Escape Room Creator</lang>! Puedes decir: "cargar juego número..." para cargar un juego. También puedes decir "salir del juego" para abandonar.';
-
     if (tienePantalla(handlerInput)) {
       return handlerInput.responseBuilder
         .addDirective({
@@ -343,9 +341,15 @@ const ProcessHTMLMessageHandler = {
           if (result.success) {
             const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
             sessionAttributes.usuarioLogueado = usuario;
+            sessionAttributes.tipoUsuario = 'profesor';
             handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
+            
+            const speakOutput = `¡Bienvenido, ${result.nombre}! Has iniciado sesión correctamente. ` +
+                            `Puedes decir: "cargar juego número..." para cargar un juego o ` +
+                            `"crear nuevo juego" para crear un juego nuevo.`;
+
             return handlerInput.responseBuilder
-              .speak(`¡Bienvenido, ${result.nombre}! Has iniciado sesión correctamente.`)
+              .speak(speakOutput)
               .getResponse();
           } else {
             return handlerInput.responseBuilder
@@ -390,9 +394,13 @@ const ProcessHTMLMessageHandler = {
           if (result.success) {
             const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
             sessionAttributes.usuarioLogueado = nombre;
+            sessionAttributes.tipoUsuario = 'alumno';
             handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
+            const speakOutput = `¡Bienvenido, ${result.nombre}! Has ingresado correctamente. ` +
+              `Puedes decir: "cargar juego número..." para cargar un juego.`;
+
             return handlerInput.responseBuilder
-              .speak(`¡Bienvenido, ${result.nombre}! Has ingresado correctamente.`)
+              .speak(speakOutput)
               .getResponse();
           } else {
             return handlerInput.responseBuilder
