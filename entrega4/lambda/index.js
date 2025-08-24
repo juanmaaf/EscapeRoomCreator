@@ -1,6 +1,7 @@
 const Alexa = require('ask-sdk-core');
 const fs = require('fs');
 const path = require('path');
+const db = require('./bd.js');
 
 /* ===================== HELPERS ===================== */
 
@@ -324,6 +325,73 @@ const ProcessHTMLMessageHandler = {
       } else {
         return pedirContinuar(handlerInput, '¡Se acabó el tiempo!');
       }
+    }
+
+    // ===================== LOGIN / REGISTRO =====================
+    if (message.action === "login_profesor") {
+      const { usuario, password } = message.datos;
+      return db.loginProfesor(usuario, password)
+        .then(result => {
+          if (result.success) {
+            return handlerInput.responseBuilder
+              .speak(`¡Bienvenido, ${result.nombre}! Has iniciado sesión correctamente.`)
+              .getResponse();
+          } else {
+            return handlerInput.responseBuilder
+              .speak(`Error: ${result.message}`)
+              .getResponse();
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          return handlerInput.responseBuilder
+            .speak("Ocurrió un error al intentar iniciar sesión. Inténtalo de nuevo.")
+            .getResponse();
+        });
+    }
+
+    if (message.action === "registrar_profesor") {
+      const { nombre, usuario, password } = message.datos;
+      return db.registrarProfesor({ nombre, usuario, password })
+        .then(result => {
+          if (result.success) {
+            return handlerInput.responseBuilder
+              .speak(`Profesor ${nombre} registrado correctamente. Ya puedes iniciar sesión.`)
+              .getResponse();
+          } else {
+            return handlerInput.responseBuilder
+              .speak(`Error al registrar: ${result.message}`)
+              .getResponse();
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          return handlerInput.responseBuilder
+            .speak("Ocurrió un error al registrar el profesor. Inténtalo nuevamente.")
+            .getResponse();
+        });
+    }
+
+    if (message.action === "login_alumno") {
+      const { nombre, curso, grupo } = message.datos;
+      return db.loginAlumno(nombre, curso, grupo)
+        .then(result => {
+          if (result.success) {
+            return handlerInput.responseBuilder
+              .speak(`¡Bienvenido, ${result.nombre}! Has ingresado correctamente.`)
+              .getResponse();
+          } else {
+            return handlerInput.responseBuilder
+              .speak("Ocurrió un error al iniciar sesión como alumno. Inténtalo de nuevo.")
+              .getResponse();
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          return handlerInput.responseBuilder
+            .speak("Ocurrió un error inesperado. Inténtalo de nuevo.")
+            .getResponse();
+        });
     }
 
     return handlerInput.responseBuilder.getResponse();
