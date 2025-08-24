@@ -235,8 +235,6 @@ function handleMessageFromSkill(message) {
         if (menuDiv) {
           menuDiv.style.display = "none";
         }
-    
-        logToCloudwatch(`Login exitoso como ${message.tipoUsuario} → ocultando botones`);
     }
     else {
         logToCloudwatch("Acción no reconocida: " + message.action);

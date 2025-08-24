@@ -432,7 +432,7 @@ const ProcessHTMLMessageHandler = {
             .getResponse();
         });
     }
-
+    
     return handlerInput.responseBuilder.getResponse();
   }
 };
