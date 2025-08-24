@@ -171,6 +171,8 @@ const CargarEscapeRoomIntentHandler = {
     return Alexa.getIntentName(handlerInput.requestEnvelope) === 'CargarEscapeRoom';
   },
   handle(handlerInput) {
+    const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
+    
     // Comprobar si hay usuario logueado
     if (!sessionAttributes.usuarioLogueado) {
       return handlerInput.responseBuilder
@@ -189,7 +191,6 @@ const CargarEscapeRoomIntentHandler = {
         .getResponse();
     }
     
-    const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
     sessionAttributes.juego = juego;
     sessionAttributes.puzleActual = 0;
     sessionAttributes.puzleIniciado = false;
