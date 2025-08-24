@@ -44,6 +44,76 @@ function iniciarContador(tiempoMaximo) {
     }, 1000);
 }
 
+function mostrarFormularioAlumno() {
+    document.getElementById("iframe-container").innerHTML = `
+      <form id="form-alumno">
+        <label>Nombre:</label><br>
+        <input type="text" id="nombreAlumno" required><br>
+        <label>Curso:</label><br>
+        <input type="text" id="cursoAlumno" required><br>
+        <label>Grupo:</label><br>
+        <input type="text" id="grupoAlumno" required><br>
+        <button type="submit">Entrar</button>
+      </form>
+    `;
+
+    document.getElementById("form-alumno").onsubmit = (e) => {
+        e.preventDefault();
+        const alumno = {
+            nombre: document.getElementById("nombreAlumno").value,
+            curso: document.getElementById("cursoAlumno").value,
+            grupo: document.getElementById("grupoAlumno").value
+        };
+        handleMessageToSkill({ action: "login_alumno", datos: alumno });
+    };
+}
+
+function mostrarFormularioProfesor() {
+    document.getElementById("iframe-container").innerHTML = `
+      <form id="form-profesor">
+        <label>Usuario:</label><br>
+        <input type="text" id="usuarioProfesor" required><br>
+        <label>Contraseña:</label><br>
+        <input type="password" id="passwordProfesor" required><br>
+        <button type="submit">Entrar</button>
+        <button type="button" onclick="mostrarRegistroProfesor()">Registrarse</button>
+      </form>
+    `;
+
+    document.getElementById("form-profesor").onsubmit = (e) => {
+        e.preventDefault();
+        const profesor = {
+            usuario: document.getElementById("usuarioProfesor").value,
+            password: document.getElementById("passwordProfesor").value
+        };
+        handleMessageToSkill({ action: "login_profesor", datos: profesor });
+    };
+}
+
+function mostrarRegistroProfesor() {
+    document.getElementById("iframe-container").innerHTML = `
+      <form id="registro-profesor">
+        <label>Nombre:</label><br>
+        <input type="text" id="nombreProfesor" required><br>
+        <label>Usuario:</label><br>
+        <input type="text" id="usuarioNuevo" required><br>
+        <label>Contraseña:</label><br>
+        <input type="password" id="passwordNuevo" required><br>
+        <button type="submit">Registrarse</button>
+      </form>
+    `;
+
+    document.getElementById("registro-profesor").onsubmit = (e) => {
+        e.preventDefault();
+        const profesor = {
+            nombre: document.getElementById("nombreProfesor").value,
+            usuario: document.getElementById("usuarioNuevo").value,
+            password: document.getElementById("passwordNuevo").value
+        };
+        handleMessageToSkill({ action: "registrar_profesor", datos: profesor });
+    };
+}
+
 // ----- Gestión de pistas -----
 function mostrarPista(texto) {
     const pistaDiv = document.getElementById("pista-container");
