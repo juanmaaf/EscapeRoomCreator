@@ -307,7 +307,15 @@ const ProcessHTMLMessageHandler = {
       sessionAttributes.fallosPuzle = 0;
       avanzarPuzle(sessionAttributes);
       handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
-      return pedirContinuar(handlerInput, '¡Se acabó el tiempo!');
+    
+      if (juegoTerminado(sessionAttributes)) {
+        return handlerInput.responseBuilder
+          .speak('¡Se acabó el tiempo en el último desafío! El juego ha terminado.')
+          .withShouldEndSession(true)
+          .getResponse();
+      } else {
+        return pedirContinuar(handlerInput, '¡Se acabó el tiempo!');
+      }
     }
 
     return handlerInput.responseBuilder.getResponse();
