@@ -121,8 +121,6 @@ const LaunchRequestHandler = {
 
     if (tienePantalla(handlerInput)) {
       return handlerInput.responseBuilder
-        .speak(speakOutput)
-        .reprompt('¿Qué quieres hacer? Puedes decir "cargar juego número..." para cargar un juego.')
         .addDirective({
           type: "Alexa.Presentation.HTML.Start",
           data: {},
@@ -132,6 +130,8 @@ const LaunchRequestHandler = {
           },
           configuration: { timeoutInSeconds: 300 }
         })
+        .speak('¡Bienvenido a <lang xml:lang="en-US">Escape Room Creator</lang>! Por favor, inicia sesión pulsando "Soy Alumno" o "Soy Profesor" en la pantalla.')
+        .withShouldEndSession(false)
         .getResponse();
     } else {
       return handlerInput.responseBuilder
@@ -173,6 +173,14 @@ const CargarEscapeRoomIntentHandler = {
     return Alexa.getIntentName(handlerInput.requestEnvelope) === 'CargarEscapeRoom';
   },
   handle(handlerInput) {
+    // Comprobar si hay usuario logueado
+    if (!sessionAttributes.usuarioLogueado) {
+      return handlerInput.responseBuilder
+        .speak('Debes iniciar sesión como alumno o profesor antes de poder cargar un juego.')
+        .reprompt('Por favor, inicia sesión pulsando "Soy Alumno" o "Soy Profesor" en la pantalla.')
+        .getResponse();
+    }
+
     const idJuego = Alexa.getSlotValue(handlerInput.requestEnvelope, 'idJuego');
     const juego = juegos.find(j => j.id === Number(idJuego));
 
@@ -333,6 +341,9 @@ const ProcessHTMLMessageHandler = {
       return db.loginProfesor(usuario, password)
         .then(result => {
           if (result.success) {
+            const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
+            sessionAttributes.usuarioLogueado = usuario;
+            handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
             return handlerInput.responseBuilder
               .speak(`¡Bienvenido, ${result.nombre}! Has iniciado sesión correctamente.`)
               .getResponse();
@@ -377,6 +388,9 @@ const ProcessHTMLMessageHandler = {
       return db.loginAlumno(nombre, curso, grupo)
         .then(result => {
           if (result.success) {
+            const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
+            sessionAttributes.usuarioLogueado = nombre;
+            handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
             return handlerInput.responseBuilder
               .speak(`¡Bienvenido, ${result.nombre}! Has ingresado correctamente.`)
               .getResponse();
