@@ -279,7 +279,15 @@ const ResolverPuzleIntentHandler = {
       } else {
         avanzarPuzle(sessionAttributes);
         handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
-        return pedirContinuar(handlerInput, 'Has alcanzado el máximo de intentos de este desafío. Pasamos al siguiente.');
+      
+        if (juegoTerminado(sessionAttributes)) {
+          return handlerInput.responseBuilder
+            .speak('Has alcanzado el máximo de intentos de este último desafío. El juego ha terminado.')
+            .withShouldEndSession(true)
+            .getResponse();
+        } else {
+          return pedirContinuar(handlerInput, 'Has alcanzado el máximo de intentos de este desafío. Pasamos al siguiente.');
+        }
       }
     }
 
