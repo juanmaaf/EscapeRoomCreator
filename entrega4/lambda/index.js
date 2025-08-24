@@ -139,6 +139,35 @@ const LaunchRequestHandler = {
     }
   }
 };
+
+const CrearNuevoJuegoIntentHandler = {
+  canHandle(handlerInput) {
+    return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' &&
+           Alexa.getIntentName(handlerInput.requestEnvelope) === 'CrearNuevoJuego';
+  },
+  handle(handlerInput) {
+    const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
+
+    // Solo profesores registrados pueden crear juegos
+    if (sessionAttributes.tipoUsuario !== 'profesor') {
+      return handlerInput.responseBuilder
+        .speak('Solo los profesores registrados pueden crear nuevos juegos.')
+        .getResponse();
+    }
+
+    // Enviar mensaje a la web app para cargar el editor
+    handlerInput.responseBuilder.addDirective({
+      type: 'Alexa.Presentation.HTML.HandleMessage',
+      message: {
+        action: 'abrir_editor_escape_room'
+      }
+    });
+
+    return handlerInput.responseBuilder
+      .speak('Abriendo el editor de escape rooms. Usa la pantalla para crear tu juego.')
+      .getResponse();
+  }
+};
   
 const IntentSinJuegoHandler = {
   canHandle(handlerInput) {
@@ -493,6 +522,7 @@ const SessionEndedRequestHandler = {
 exports.handler = Alexa.SkillBuilders.custom()
   .addRequestHandlers(
     LaunchRequestHandler,
+    CrearNuevoJuegoIntentHandler,
     CargarEscapeRoomIntentHandler,
     YesIntentHandler,
     IntentSinJuegoHandler,
