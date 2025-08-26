@@ -128,7 +128,7 @@ const LaunchRequestHandler = {
           },
           configuration: { timeoutInSeconds: 300 }
         })
-        .speak('¡Bienvenido a <lang xml:lang="en-US">Escape Room Creator</lang>! Por favor, inicia sesión pulsando "Soy Alumno" o "Soy Docente" en la pantalla.')
+        .speak('¡Bienvenido a <lang xml:lang="en-US">Escape Room Creator</lang>! Por favor, inicia sesión pulsando "Soy Alumno", "Soy Docente" o "Soy Coordinador" en la pantalla.')
         .withShouldEndSession(false)
         .getResponse();
     } else {
