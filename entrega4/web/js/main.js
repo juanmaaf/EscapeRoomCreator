@@ -35,53 +35,57 @@ function mostrarMenuInicial() {
 function mostrarEditorEscapeRoom(juegosExistentes = []) {
     const container = document.getElementById("iframe-container");
     container.innerHTML = `
-        <div id="editor-escape-room" style="width:100%; height:100%; display:flex; flex-direction:column; gap:20px;">
+        <div id="editor-escape-room" style="width:100%; height:100%; display:flex; flex-direction:column; gap:20px; align-items:center; padding:20px; box-sizing:border-box; overflow-y:auto;">
+            
             <h2 style="text-align:center; margin-bottom:10px;">Creador de Escape Rooms</h2>
             
             <!-- Importar datos existentes -->
-            <div style="text-align:center; margin-bottom:20px;">
-                <label for="importarJuego" style="font-weight:bold;">Importar Escape Room existente:</label>
-                <select id="importarJuego">
-                    <option value="">-- Selecciona un juego --</option>
+            <div style="width:100%; max-width:900px; background:#f9fafb; padding:20px; border-radius:12px; box-shadow:0 2px 6px rgba(0,0,0,0.1);">
+                <h3 style="margin-bottom:10px;">Importar Escape Room existente</h3>
+                <label for="importarJuego" style="font-weight:bold;">Selecciona:</label>
+                <select id="importarJuego" style="padding:8px 12px; margin-left:8px; border-radius:6px; border:1px solid #d1d5db;">
+                    <option value="">-- Ninguno --</option>
                     ${juegosExistentes.map(j => `<option value="${j.id}">${j.titulo}</option>`).join("")}
                 </select>
-                <button id="btn-importar">Importar</button>
+                <button id="btn-importar" style="margin-left:10px; padding:8px 14px; border:none; background:#3b82f6; color:white; border-radius:6px; cursor:pointer;">Importar</button>
             </div>
 
-            <form id="form-escape-room" style="flex:1; display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+            <form id="form-escape-room" style="width:100%; max-width:900px; display:flex; flex-direction:column; gap:20px;">
 
                 <!-- Bloque Datos del Juego -->
-                <div style="background:#f3f4f6; padding:20px; border-radius:12px; box-shadow:0 2px 6px rgba(0,0,0,0.1);">
-                    <h3>Datos del Juego</h3>
+                <div style="background:#f9fafb; padding:20px; border-radius:12px; box-shadow:0 2px 6px rgba(0,0,0,0.1);">
+                    <h3 style="margin-bottom:15px;">Datos del Juego</h3>
+                    
                     <label>Título:</label>
-                    <input type="text" id="titulo" required><br>
-
+                    <input type="text" id="titulo" required style="width:100%; margin-bottom:10px; padding:8px; border:1px solid #d1d5db; border-radius:6px;">
+                    
                     <label>Narrativa inicial:</label>
-                    <textarea id="narrativa" rows="3" required></textarea><br>
-
+                    <textarea id="narrativa" rows="3" required style="width:100%; margin-bottom:10px; padding:8px; border:1px solid #d1d5db; border-radius:6px;"></textarea>
+                    
                     <label>Fallos máximos por puzle:</label>
-                    <input type="number" id="fallosMaximos" min="1" value="3" required><br>
-
+                    <input type="number" id="fallosMaximos" min="1" value="3" required style="width:100%; margin-bottom:10px; padding:8px; border:1px solid #d1d5db; border-radius:6px;">
+                    
                     <label>Tipo de portada:</label>
-                    <select id="tipoPortada">
+                    <select id="tipoPortada" style="width:100%; margin-bottom:10px; padding:8px; border:1px solid #d1d5db; border-radius:6px;">
                         <option value="default">Default</option>
                         <option value="tipo1">Tipo 1</option>
                         <option value="tipo2">Tipo 2</option>
-                    </select><br>
-
+                    </select>
+                    
                     <label>Curso:</label>
-                    <input type="text" id="curso" required><br>
+                    <input type="text" id="curso" required style="width:100%; padding:8px; border:1px solid #d1d5db; border-radius:6px;">
                 </div>
 
                 <!-- Bloque Puzles -->
-                <div style="background:#f3f4f6; padding:20px; border-radius:12px; box-shadow:0 2px 6px rgba(0,0,0,0.1); display:flex; flex-direction:column;">
-                    <h3>Puzles</h3>
+                <div style="background:#f9fafb; padding:20px; border-radius:12px; box-shadow:0 2px 6px rgba(0,0,0,0.1); display:flex; flex-direction:column;">
+                    <h3 style="margin-bottom:15px;">Puzles</h3>
                     <div id="lista-puzles" style="flex:1; overflow-y:auto; max-height:60vh; padding-right:5px;"></div>
-                    <button type="button" id="btn-agregar-puzle" style="margin-top:10px;">➕ Agregar Puzle</button>
+                    <button type="button" id="btn-agregar-puzle" style="margin-top:10px; padding:10px 16px; border:none; background:#10b981; color:white; border-radius:6px; cursor:pointer; font-size:1em;">Agregar Puzle</button>
                 </div>
 
-                <div style="grid-column: span 2; text-align:center; margin-top:20px;">
-                    <button type="submit" style="background:#10b981; color:white; padding:12px 20px; border:none; border-radius:8px; cursor:pointer; font-size:1.1em;">💾 Guardar Escape Room</button>
+                <!-- Botón Guardar -->
+                <div style="text-align:center; margin-top:10px;">
+                    <button type="submit" style="background:#10b981; color:white; padding:14px 22px; border:none; border-radius:8px; cursor:pointer; font-size:1.1em;">Guardar Escape Room</button>
                 </div>
             </form>
         </div>
@@ -95,35 +99,77 @@ function mostrarEditorEscapeRoom(juegosExistentes = []) {
         div.className = "puzle";
         div.dataset.id = puzleId;
         div.style = "background:#fff; margin-bottom:15px; padding:15px; border:1px solid #d1d5db; border-radius:8px; position:relative;";
-
+    
         div.innerHTML = `
-            <button type="button" class="btn-borrar" style="position:absolute; top:10px; right:10px; background:#ef4444; color:white; border:none; border-radius:50%; width:28px; height:28px; cursor:pointer;">✖</button>
-            <h4>Puzle ${puzleId + 1}</h4>
+            <button type="button" class="btn-borrar" 
+                style="position:absolute; top:10px; right:10px; 
+                       background:#ef4444; color:white; border:none; 
+                       border-radius:50%; width:30px; height:30px; 
+                       cursor:pointer; display:flex; align-items:center; 
+                       justify-content:center; font-size:14px;">✖</button>
+            <h4 style="margin-bottom:10px;">Puzle ${puzleId + 1}</h4>
             
             <label>Tipo:</label>
-            <select class="tipo-puzle">
+            <select class="tipo-puzle" style="width:100%; margin-bottom:8px; padding:6px; border:1px solid #d1d5db; border-radius:6px;">
                 <option value="cifrado-cesar" ${datos.tipo==="cifrado-cesar"?"selected":""}>Cifrado César</option>
                 <option value="acertijo" ${datos.tipo==="acertijo"?"selected":""}>Acertijo</option>
                 <option value="logica" ${datos.tipo==="logica"?"selected":""}>Lógica</option>
-            </select><br>
-
+            </select>
+    
             <label>Instrucción:</label>
-            <textarea class="instruccion" rows="2" required>${datos.instruccion||""}</textarea><br>
-
+            <textarea class="instruccion" rows="2" required style="width:100%; margin-bottom:8px; padding:6px; border:1px solid #d1d5db; border-radius:6px;">${datos.instruccion||""}</textarea>
+    
             <label>Respuesta correcta:</label>
-            <input type="text" class="respuestaCorrecta" value="${datos.respuestaCorrecta?.[0]||""}" required><br>
-
+            <input type="text" class="respuestaCorrecta" value="${datos.respuestaCorrecta?.[0]||""}" required style="width:100%; margin-bottom:8px; padding:6px; border:1px solid #d1d5db; border-radius:6px;">
+    
+            <!-- Campo oculto para acertijo -->
+            <div class="clave-cifrado-container" style="display:none; margin-bottom:8px;">
+                <label>Clave de cifrado:</label>
+                <input type="text" class="claveCifrado" value="${datos.claveCifrado||""}" style="width:100%; padding:6px; border:1px solid #d1d5db; border-radius:6px;">
+            </div>
+    
             <label>Tiempo estimado (segundos):</label>
-            <input type="number" class="tiempoEstimado" min="1" value="${datos.tiempo_estimado_segundos||60}" required><br>
-
+            <input type="number" class="tiempoEstimado" min="1" value="${datos.tiempo_estimado_segundos||60}" required style="width:100%; margin-bottom:8px; padding:6px; border:1px solid #d1d5db; border-radius:6px;">
+    
             <label>Pistas (separadas por ;):</label>
-            <input type="text" class="pistas" value="${datos.pistas?datos.pistas.join("; "):""}"><br>
-
+            <input type="text" class="pistas" value="${datos.pistas?datos.pistas.join("; "):""}" style="width:100%; margin-bottom:8px; padding:6px; border:1px solid #d1d5db; border-radius:6px;">
+    
             <label>Narrativa tras superar puzle:</label>
-            <textarea class="narrativaPuzle" rows="2">${datos.narrativa||""}</textarea><br>
+            <textarea class="narrativaPuzle" rows="2" style="width:100%; margin-bottom:8px; padding:6px; border:1px solid #d1d5db; border-radius:6px;">${datos.narrativa||""}</textarea>
         `;
-
-        div.querySelector(".btn-borrar").onclick = () => div.remove();
+    
+        // Mostrar u ocultar "Clave de cifrado" según tipo
+        const selectTipo = div.querySelector(".tipo-puzle");
+        const claveContainer = div.querySelector(".clave-cifrado-container");
+    
+        function actualizarClave() {
+            if (selectTipo.value === "cifrado-cesar") {
+                claveContainer.style.display = "block";
+            } else {
+                claveContainer.style.display = "none";
+            }
+        }
+    
+        // Inicializar estado correcto
+        actualizarClave();
+    
+        // Escuchar cambios en el select
+        selectTipo.addEventListener("change", actualizarClave);
+    
+        div.querySelector(".btn-borrar").onclick = () => {
+            div.remove();
+        
+            // Actualizar números de los puzles restantes
+            const puzlesRestantes = listaPuzles.querySelectorAll(".puzle");
+            puzlesRestantes.forEach((p, index) => {
+                const h4 = p.querySelector("h4");
+                h4.textContent = `Puzle ${index + 1}`;
+                p.dataset.id = index;
+            });
+        
+            // Ajustar contador de puzles si quieres que siga aumentando
+            contadorPuzles = puzlesRestantes.length;
+        };
         listaPuzles.appendChild(div);
     }
 
