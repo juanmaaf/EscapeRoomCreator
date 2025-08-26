@@ -149,9 +149,9 @@ const CrearNuevoJuegoIntentHandler = {
     const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
 
     // Solo docentes registrados pueden crear juegos
-    if (sessionAttributes.tipoUsuario !== 'docente') {
+    if (sessionAttributes.tipoUsuario !== 'docente' && sessionAttributes.tipoUsuario !== 'coordinador') {
       return handlerInput.responseBuilder
-        .speak('Solo los docentes registrados pueden crear nuevos juegos.')
+        .speak('Solo los docentes y coordinadores registrados pueden crear nuevos juegos.')
         .getResponse();
     }
 
@@ -382,8 +382,10 @@ const ProcessHTMLMessageHandler = {
                             `Puedes decir: "cargar juego número..." para cargar un juego o ` +
                             `"crear nuevo juego" para crear uno nuevo.`;
             } else {
-              speakOutput = `¡Bienvenido, coordinador ${result.nombre}! Has iniciado sesión correctamente. ` +
-                            `Puedes gestionar docentes, revisar juegos o configurar parámetros generales.`;
+              speakOutput = `¡Bienvenido, ${result.nombre}! Has iniciado sesión correctamente. ` +
+                            `Puedes decir: "cargar juego número..." para cargar un juego o ` +
+                            `"crear nuevo juego" para crear uno nuevo o ` + 
+                            `"generar reportes" para generar un nuevo reporte.`;
             }
     
             handlerInput.responseBuilder.addDirective({
