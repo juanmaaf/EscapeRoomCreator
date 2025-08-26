@@ -128,7 +128,7 @@ const LaunchRequestHandler = {
           },
           configuration: { timeoutInSeconds: 300 }
         })
-        .speak('¡Bienvenido a <lang xml:lang="en-US">Escape Room Creator</lang>! Por favor, inicia sesión pulsando "Soy Alumno" o "Soy Profesor" en la pantalla.')
+        .speak('¡Bienvenido a <lang xml:lang="en-US">Escape Room Creator</lang>! Por favor, inicia sesión pulsando "Soy Alumno" o "Soy Docente" en la pantalla.')
         .withShouldEndSession(false)
         .getResponse();
     } else {
@@ -148,10 +148,10 @@ const CrearNuevoJuegoIntentHandler = {
   handle(handlerInput) {
     const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
 
-    // Solo profesores registrados pueden crear juegos
-    if (sessionAttributes.tipoUsuario !== 'profesor') {
+    // Solo docentes registrados pueden crear juegos
+    if (sessionAttributes.tipoUsuario !== 'docente') {
       return handlerInput.responseBuilder
-        .speak('Solo los profesores registrados pueden crear nuevos juegos.')
+        .speak('Solo los docentes registrados pueden crear nuevos juegos.')
         .getResponse();
     }
 
@@ -164,7 +164,7 @@ const CrearNuevoJuegoIntentHandler = {
     });
 
     return handlerInput.responseBuilder
-      .speak('Abriendo el editor de escape rooms. Usa la pantalla para crear tu juego.')
+      .speak('Abriendo el editor de <lang xml:lang="en-US">escape rooms</lang>. Usa la pantalla para crear tu juego.')
       .getResponse();
   }
 };
@@ -205,8 +205,8 @@ const CargarEscapeRoomIntentHandler = {
     // Comprobar si hay usuario logueado
     if (!sessionAttributes.usuarioLogueado) {
       return handlerInput.responseBuilder
-        .speak('Debes iniciar sesión como alumno o profesor antes de poder cargar un juego.')
-        .reprompt('Por favor, inicia sesión pulsando "Soy Alumno" o "Soy Profesor" en la pantalla.')
+        .speak('Debes iniciar sesión como alumno o docente antes de poder cargar un juego.')
+        .reprompt('Por favor, inicia sesión pulsando "Soy Alumno" o "Soy Docente" en la pantalla.')
         .getResponse();
     }
 
@@ -364,31 +364,34 @@ const ProcessHTMLMessageHandler = {
     }
 
     // ===================== LOGIN / REGISTRO =====================
-    if (message.action === "login_profesor") {
+    if (message.action === "login_docente" || message.action === "login_coordinador") {
       const { usuario, password } = message.datos;
-      return db.loginProfesor(usuario, password)
+      const tipo = message.action === "login_docente" ? "docente" : "coordinador";
+    
+      return db.loginDocenteCoordinador(usuario, password, tipo)
         .then(result => {
           if (result.success) {
             const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
             sessionAttributes.usuarioLogueado = usuario;
-            sessionAttributes.tipoUsuario = 'profesor';
+            sessionAttributes.tipoUsuario = tipo;
             handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
-            
-            const speakOutput = `¡Bienvenido, ${result.nombre}! Has iniciado sesión correctamente. ` +
+    
+            let speakOutput = "";
+            if (tipo === "docente") {
+              speakOutput = `¡Bienvenido, ${result.nombre}! Has iniciado sesión correctamente. ` +
                             `Puedes decir: "cargar juego número..." para cargar un juego o ` +
-                            `"crear nuevo juego" para crear un juego nuevo.`;
-
+                            `"crear nuevo juego" para crear uno nuevo.`;
+            } else {
+              speakOutput = `¡Bienvenido, coordinador ${result.nombre}! Has iniciado sesión correctamente. ` +
+                            `Puedes gestionar docentes, revisar juegos o configurar parámetros generales.`;
+            }
+    
             handlerInput.responseBuilder.addDirective({
               type: 'Alexa.Presentation.HTML.HandleMessage',
-              message: { 
-                action: "login_exitoso", 
-                tipoUsuario: "profesor" 
-              }
-            });               
-
-            return handlerInput.responseBuilder
-              .speak(speakOutput)
-              .getResponse();
+              message: { action: "login_exitoso", tipoUsuario: tipo }
+            });
+    
+            return handlerInput.responseBuilder.speak(speakOutput).getResponse();
           } else {
             return handlerInput.responseBuilder
               .speak(`Error: ${result.message}`)
@@ -402,14 +405,16 @@ const ProcessHTMLMessageHandler = {
             .getResponse();
         });
     }
-
-    if (message.action === "registrar_profesor") {
+    
+    if (message.action === "registrar_docente" || message.action === "registrar_coordinador") {
       const { nombre, usuario, password } = message.datos;
-      return db.registrarProfesor({ nombre, usuario, password })
+      const tipo = message.action === "registrar_docente" ? "docente" : "coordinador";
+    
+      return db.registrarDocenteCoordinador({ nombre, usuario, password, tipo })
         .then(result => {
           if (result.success) {
             return handlerInput.responseBuilder
-              .speak(`Profesor ${nombre} registrado correctamente. Ya puedes iniciar sesión.`)
+              .speak(`${tipo.charAt(0).toUpperCase() + tipo.slice(1)} ${nombre} registrado correctamente. Ya puedes iniciar sesión.`)
               .getResponse();
           } else {
             return handlerInput.responseBuilder
@@ -420,7 +425,7 @@ const ProcessHTMLMessageHandler = {
         .catch(err => {
           console.error(err);
           return handlerInput.responseBuilder
-            .speak("Ocurrió un error al registrar el profesor. Inténtalo nuevamente.")
+            .speak("Ocurrió un error al registrar el usuario. Inténtalo nuevamente.")
             .getResponse();
         });
     }

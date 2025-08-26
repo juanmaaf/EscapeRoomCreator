@@ -12,31 +12,34 @@ const USUARIOS_TABLE = 'EscapeRoomUsuarios';
 
 /* ===================== MÉTODOS ===================== */
 
-// Registro profesor
-async function registrarProfesor(profesor) {
-    // Verificar si el usuario ya existe
+// Registro docente/coordinador
+async function registrarDocenteCoordinador({ nombre, usuario, password, tipo }) {
+    if (!['docente', 'coordinador'].includes(tipo)) {
+        return { success: false, message: 'Tipo de usuario no válido' };
+    }
+
     const existing = await ddb.query({
         TableName: USUARIOS_TABLE,
-        IndexName: 'ProfesoresIndex',
+        IndexName: 'DocentesCoordinadoresIndex',
         KeyConditionExpression: 'tipo = :tipo AND usuario = :usuario',
         ExpressionAttributeValues: {
-            ':tipo': 'profesor',
-            ':usuario': profesor.usuario
+            ':tipo': tipo,
+            ':usuario': usuario
         }
     }).promise();
 
     if (existing.Items.length > 0) {
-        return { success: false, message: 'El usuario ya existe' };
+        return { success: false, message: `El ${tipo} ya existe` };
     }
 
     const userId = uuidv4();
-    const hashedPassword = await bcrypt.hash(profesor.password, 10); // hash seguro
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     const item = {
         userID: userId,
-        tipo: 'profesor',
-        nombre: profesor.nombre,
-        usuario: profesor.usuario,
+        tipo,
+        nombre,
+        usuario,
         password: hashedPassword
     };
 
@@ -44,14 +47,18 @@ async function registrarProfesor(profesor) {
     return { success: true, userId };
 }
 
-// Login profesor
-async function loginProfesor(usuario, password) {
+// Login docente/coordinador
+async function loginDocenteCoordinador(usuario, password, tipo) {
+    if (!['docente', 'coordinador'].includes(tipo)) {
+        return { success: false, message: 'Tipo de usuario no válido' };
+    }
+
     const params = {
         TableName: USUARIOS_TABLE,
-        IndexName: 'ProfesoresIndex',
+        IndexName: 'DocentesCoordinadoresIndex',
         KeyConditionExpression: 'tipo = :tipo AND usuario = :usuario',
         ExpressionAttributeValues: {
-            ':tipo': 'profesor',
+            ':tipo': tipo,
             ':usuario': usuario
         }
     };
@@ -59,11 +66,11 @@ async function loginProfesor(usuario, password) {
     const result = await ddb.query(params).promise();
     if (result.Items.length === 0) return { success: false, message: 'Usuario no encontrado' };
 
-    const prof = result.Items[0];
-    const passwordMatch = await bcrypt.compare(password, prof.password);
+    const user = result.Items[0];
+    const passwordMatch = await bcrypt.compare(password, user.password);
     if (!passwordMatch) return { success: false, message: 'Contraseña incorrecta' };
 
-    return { success: true, userId: prof.userID, nombre: prof.nombre };
+    return { success: true, userId: user.userID, nombre: user.nombre };
 }
 
 // Login alumno (con registro si no existe)
@@ -101,4 +108,4 @@ async function loginAlumno(nombre, curso, grupo) {
     return { success: true, userId, nombre };
 }
 
-module.exports = { registrarProfesor, loginProfesor, loginAlumno };
+module.exports = { registrarDocenteCoordinador, loginDocenteCoordinador, loginAlumno };
