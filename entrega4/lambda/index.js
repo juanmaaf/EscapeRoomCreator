@@ -155,22 +155,34 @@ const CrearNuevoJuegoIntentHandler = {
         .getResponse();
     }
 
-    // Obtenemos lista de juegos de la BD
-    const result = db.listarJuegos();  
+    return db.listarJuegos()
+      .then(result => {
+        if (result.success) {
+          // Enviar mensaje a la web app para cargar el editor con la lista de juegos
+          handlerInput.responseBuilder.addDirective({
+            type: 'Alexa.Presentation.HTML.HandleMessage',
+            message: {
+              action: 'abrir_editor_escape_room',
+              datos: result.juegos || []
+            }
+          });
 
-    // Enviar mensaje a la web app para cargar el editor
-    handlerInput.responseBuilder.addDirective({
-      type: 'Alexa.Presentation.HTML.HandleMessage',
-      message: {
-        action: 'abrir_editor_escape_room',
-        datos: result.juegos || []
-      }
-    });
-
-    return handlerInput.responseBuilder
-      .speak('Abriendo el editor de <lang xml:lang="en-US">escape rooms</lang>. Usa la pantalla para crear tu juego.')
-      .getResponse();
-  }
+          return handlerInput.responseBuilder
+            .speak('Abriendo el editor de <lang xml:lang="en-US">escape rooms</lang>. Usa la pantalla para crear tu juego.')
+            .getResponse();
+        } else {
+          return handlerInput.responseBuilder
+            .speak('No se pudo obtener la lista de juegos.')
+            .getResponse();
+        }
+      })
+      .catch(err => {
+        console.error("Error al listar juegos:", err);
+        return handlerInput.responseBuilder
+          .speak("Ocurrió un error al intentar abrir el editor de juegos.")
+          .getResponse();
+      });
+    }
 };
   
 const IntentSinJuegoHandler = {
