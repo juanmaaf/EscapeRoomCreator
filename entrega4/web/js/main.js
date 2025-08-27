@@ -36,9 +36,8 @@ function mostrarEditorEscapeRoom(juegosExistentes = []) {
     const container = document.getElementById("iframe-container");
     container.innerHTML = `
         <div id="editor-escape-room" style="width:100%; height:100%; display:flex; flex-direction:column; gap:20px; align-items:center; padding:20px; box-sizing:border-box; overflow-y:auto;">
-            
             <h2 style="text-align:center; margin-bottom:10px;">Creador de Escape Rooms</h2>
-            
+
             <!-- Importar datos existentes -->
             <div style="width:100%; max-width:900px; background:#f9fafb; padding:20px; border-radius:12px; box-shadow:0 2px 6px rgba(0,0,0,0.1);">
                 <h3 style="margin-bottom:10px;">Importar Escape Room existente</h3>
@@ -51,11 +50,9 @@ function mostrarEditorEscapeRoom(juegosExistentes = []) {
             </div>
 
             <form id="form-escape-room" style="width:100%; max-width:900px; display:flex; flex-direction:column; gap:20px;">
-
                 <!-- Bloque Datos del Juego -->
                 <div style="background:#f9fafb; padding:20px; border-radius:12px; box-shadow:0 2px 6px rgba(0,0,0,0.1);">
                     <h3 style="margin-bottom:15px;">Datos del Juego</h3>
-                    
                     <label>Título:</label>
                     <input type="text" id="titulo" required style="width:100%; margin-bottom:10px; padding:8px; border:1px solid #d1d5db; border-radius:6px;">
                     
@@ -122,7 +119,6 @@ function mostrarEditorEscapeRoom(juegosExistentes = []) {
             <label>Respuesta correcta:</label>
             <input type="text" class="respuestaCorrecta" value="${datos.respuestaCorrecta?.[0]||""}" required style="width:100%; margin-bottom:8px; padding:6px; border:1px solid #d1d5db; border-radius:6px;">
     
-            <!-- Campo oculto para acertijo -->
             <div class="clave-cifrado-container" style="display:none; margin-bottom:8px;">
                 <label>Clave de cifrado:</label>
                 <input type="text" class="claveCifrado" value="${datos.claveCifrado||""}" style="width:100%; padding:6px; border:1px solid #d1d5db; border-radius:6px;">
@@ -138,51 +134,31 @@ function mostrarEditorEscapeRoom(juegosExistentes = []) {
             <textarea class="narrativaPuzle" rows="2" style="width:100%; margin-bottom:8px; padding:6px; border:1px solid #d1d5db; border-radius:6px;">${datos.narrativa||""}</textarea>
         `;
     
-        // Mostrar u ocultar "Clave de cifrado" según tipo
         const selectTipo = div.querySelector(".tipo-puzle");
         const claveContainer = div.querySelector(".clave-cifrado-container");
     
         function actualizarClave() {
-            if (selectTipo.value === "cifrado-cesar") {
-                claveContainer.style.display = "block";
-            } else {
-                claveContainer.style.display = "none";
-            }
+            claveContainer.style.display = selectTipo.value === "cifrado-cesar" ? "block" : "none";
         }
     
-        // Inicializar estado correcto
         actualizarClave();
-    
-        // Escuchar cambios en el select
         selectTipo.addEventListener("change", actualizarClave);
     
         div.querySelector(".btn-borrar").onclick = () => {
             div.remove();
-        
-            // Actualizar números de los puzles restantes
             const puzlesRestantes = listaPuzles.querySelectorAll(".puzle");
             puzlesRestantes.forEach((p, index) => {
-                const h4 = p.querySelector("h4");
-                h4.textContent = `Puzle ${index + 1}`;
+                p.querySelector("h4").textContent = `Puzle ${index + 1}`;
                 p.dataset.id = index;
             });
-        
-            // Ajustar contador de puzles si quieres que siga aumentando
             contadorPuzles = puzlesRestantes.length;
         };
         listaPuzles.appendChild(div);
     }
 
-    // Al menos un puzle inicial
-    crearPuzleFormulario(contadorPuzles);
-    contadorPuzles++;
+    crearPuzleFormulario(contadorPuzles++);
+    document.getElementById("btn-agregar-puzle").onclick = () => crearPuzleFormulario(contadorPuzles++);
 
-    document.getElementById("btn-agregar-puzle").onclick = () => {
-        crearPuzleFormulario(contadorPuzles);
-        contadorPuzles++;
-    };
-
-    // Importar datos desde BD
     document.getElementById("btn-importar").onclick = () => {
         const id = document.getElementById("importarJuego").value;
         if (!id) return alert("Selecciona un escape room para importar");
@@ -190,50 +166,42 @@ function mostrarEditorEscapeRoom(juegosExistentes = []) {
         const juego = juegosExistentes.find(j => j.id == id);
         if (!juego) return;
 
-        // Cargar datos generales
         document.getElementById("titulo").value = juego.titulo;
         document.getElementById("narrativa").value = juego.narrativa;
-        document.getElementById("fallosMaximos").value = juego.fallosmaximospuzle;
-        document.getElementById("tipoPortada").value = juego.tipo_portada;
-        document.getElementById("curso").value = juego.curso;
+        document.getElementById("fallosMaximos").value = juego.fallosmaximospuzle || 3;
+        document.getElementById("tipoPortada").value = juego.tipo_portada || "default";
+        document.getElementById("curso").value = juego.curso || "";
 
-        // Cargar puzles
         listaPuzles.innerHTML = "";
         contadorPuzles = 0;
-        juego.puzles.forEach(p => {
-            crearPuzleFormulario(contadorPuzles, p);
-            contadorPuzles++;
-        });
+        (juego.puzles || []).forEach(p => crearPuzleFormulario(contadorPuzles++, p));
     };
 
     document.getElementById("form-escape-room").onsubmit = (e) => {
         e.preventDefault();
 
-        // Recoger datos del juego
         const juego = {
-            titulo: document.getElementById("titulo").value,
-            narrativa: document.getElementById("narrativa").value,
-            fallosmaximospuzle: parseInt(document.getElementById("fallosMaximos").value),
+            titulo: document.getElementById("titulo").value.trim(),
+            narrativa: document.getElementById("narrativa").value.trim(),
+            fallosmaximospuzle: parseInt(document.getElementById("fallosMaximos").value) || 3,
             tipo_portada: document.getElementById("tipoPortada").value,
-            curso: document.getElementById("curso").value,
+            curso: document.getElementById("curso").value.trim(),
             puzles: []
         };
 
-        // Recoger puzles
-        document.querySelectorAll("#lista-puzles .puzle").forEach((p) => {
-            const puzle = {
+        document.querySelectorAll("#lista-puzles .puzle").forEach(p => {
+            const tiempo = parseInt(p.querySelector(".tiempoEstimado").value);
+            juego.puzles.push({
                 tipo: p.querySelector(".tipo-puzle").value,
-                instruccion: p.querySelector(".instruccion").value,
-                datos: {},
-                respuestaCorrecta: [p.querySelector(".respuestaCorrecta").value],
-                tiempo_estimado_segundos: parseInt(p.querySelector(".tiempoEstimado").value),
-                pistas: p.querySelector(".pistas").value.split(";").map(s => s.trim()).filter(s=>s),
-                narrativa: p.querySelector(".narrativaPuzle").value
-            };
-            juego.puzles.push(puzle);
+                instruccion: p.querySelector(".instruccion").value.trim(),
+                respuestaCorrecta: [p.querySelector(".respuestaCorrecta").value.trim()],
+                tiempo_estimado_segundos: isNaN(tiempo) ? 60 : tiempo,
+                pistas: p.querySelector(".pistas").value.split(";").map(s => s.trim()).filter(Boolean),
+                narrativa: p.querySelector(".narrativaPuzle").value.trim(),
+                claveCifrado: p.querySelector(".claveCifrado")?.value.trim() || undefined
+            });
         });
 
-        // Enviar mensaje a la skill para guardar en DynamoDB
         handleMessageToSkill({ action: "guardar_nuevo_escape_room", datos: juego });
         alert("Escape Room enviado para guardar en la base de datos.");
     };
