@@ -53,13 +53,12 @@ function tienePantalla(handlerInput) {
 
 // Cifrado César
 function cifradoCesar(texto, clave) {
+  texto = (texto || '').toUpperCase();
   let resultado = '';
   for (let i = 0; i < texto.length; i++) {
     const c = texto[i];
     if (c >= 'A' && c <= 'Z') {
       resultado += String.fromCharCode((c.charCodeAt(0) - 65 + clave) % 26 + 65);
-    } else if (c >= 'a' && c <= 'z') {
-      resultado += String.fromCharCode((c.charCodeAt(0) - 97 + clave) % 26 + 97);
     } else {
       resultado += c;
     }
@@ -79,7 +78,7 @@ function iniciarPuzleActual(handlerInput) {
   sessionAttributes.puzleTiempoActivo = true;
   handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
 
-  const respuesta = puzle.respuestaCorrecta || '';
+  const respuesta = (puzle.respuestaCorrecta || '').toUpperCase();
   let mensajeCifrado = respuesta;
 
   if (puzle.tipo === "cifrado-cesar") {
