@@ -64,9 +64,10 @@ function mostrarEditorEscapeRoom(juegosExistentes = []) {
             
             <label>Tipo de portada:</label>
             <select id="tipoPortada" style="width:100%; margin-bottom:10px; padding:8px; border:1px solid #d1d5db; border-radius:6px;">
-              <option value="default">Default</option>
-              <option value="tipo1">Tipo 1</option>
-              <option value="tipo2">Tipo 2</option>
+              <option value="hab_oscura" selected>Habitación Oscura (default)</option>
+              <option value="laboratorio">Laboratorio</option>
+              <option value="pasillo">Pasillo</option>
+              <option value="sala_miedo">Sala de Miedo</option>
             </select>
             
             <label>Curso:</label>
@@ -196,7 +197,7 @@ function mostrarEditorEscapeRoom(juegosExistentes = []) {
       document.getElementById("titulo").value = juegoOriginal.titulo || "";
       document.getElementById("narrativa").value = juegoOriginal.narrativa || "";
       document.getElementById("fallosMaximos").value = Number.isFinite(+juegoOriginal.fallosmaximospuzle) ? +juegoOriginal.fallosmaximospuzle : 3;
-      document.getElementById("tipoPortada").value = juegoOriginal.tipo_portada || "default";
+      document.getElementById("tipoPortada").value = juegoOriginal.tipo_portada || "hab_oscura";
       document.getElementById("curso").value = juegoOriginal.curso || "";
   
       // Normalizar y generar TODOS los puzles
@@ -476,23 +477,23 @@ function handleMessageFromSkill(message) {
         mostrarPista(message.pista);
     }
     else if (message.action === "mostrar_portada") {
-        const tipo = message.tipo || 'default';
-        const urlImagen = `https://d1qeen6fmshz39.cloudfront.net/entrega4/portadas_base/${tipo}.jpg`;
-
-        document.getElementById('iframe-container').innerHTML = `
-            <img src="${urlImagen}" alt="${tipo}"
-             style="
-               max-width: 95vw;
-               max-height: 90vh;
-               width: auto;
-               height: auto;
-               object-fit: contain;
-               border-radius: 10px;
-               display: block;
-               margin: auto;
-             "
-            />
-        `;
+      const tipo = message.tipo || 'hab_oscura';
+      const urlImagen = `https://d1qeen6fmshz39.cloudfront.net/entrega4/portadas_base/${tipo}.jpg`;
+  
+      document.getElementById('iframe-container').innerHTML = `
+          <img src="${urlImagen}" alt="${tipo}"
+           style="
+             max-width: 95vw;
+             max-height: 90vh;
+             width: auto;
+             height: auto;
+             object-fit: contain;
+             border-radius: 10px;
+             display: block;
+             margin: auto;
+           "
+          />
+      `;
     }
     else if (message.action === "login_exitoso") {
         const menuDiv = document.getElementById("menu-inicial");
