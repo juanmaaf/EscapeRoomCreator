@@ -122,7 +122,7 @@ async function listarJuegos() {
 // Guardar nuevo juego
 async function guardarJuego(juego) {
     const item = {
-        id: uuidv4(),
+        juegoID: uuidv4(),
         titulo: juego.titulo,
         narrativa: juego.narrativa,
         fallosmaximospuzle: juego.fallosmaximospuzle,

@@ -475,7 +475,6 @@ const ProcessHTMLMessageHandler = {
     // ===================== GUARDAR NUEVO ESCAPE ROOM =====================
     if (message.action === "guardar_nuevo_escape_room") {
       const juego = message.datos;
-    
       return db.guardarJuego(juego)
         .then(result => {
           if (result.success) {
@@ -494,7 +493,7 @@ const ProcessHTMLMessageHandler = {
             .speak("Ocurrió un error al guardar el juego.")
             .getResponse();
         });
-    }
+  }
 
     return handlerInput.responseBuilder.getResponse();
   }
