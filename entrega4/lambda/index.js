@@ -200,7 +200,7 @@ const IntentSinJuegoHandler = {
   handle(handlerInput) {
     const intentName = Alexa.getIntentName(handlerInput.requestEnvelope);
     const speakOutput = (intentName === 'AMAZON.YesIntent')
-      ? 'No hay ningún juego cargado actualmente. Puedes decir "cargar juego número..." para empezar un juego.'
+      ? 'No hay ningún juego cargado actualmente. Puedes decir "cargar juego..." y a continuación el título para empezar un juego.'
       : 'No hay ningún desafío iniciado. Primero debes iniciar un puzle antes de intentar resolverlo.';
 
     return handlerInput.responseBuilder
@@ -217,47 +217,60 @@ const CargarEscapeRoomIntentHandler = {
   },
   handle(handlerInput) {
     const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-    
+
     // Comprobar si hay usuario logueado
     if (!sessionAttributes.usuarioLogueado) {
       return handlerInput.responseBuilder
-        .speak('Debes iniciar sesión como alumno o docente antes de poder cargar un juego.')
-        .reprompt('Por favor, inicia sesión pulsando "Soy Alumno" o "Soy Docente" en la pantalla.')
+        .speak('Debes iniciar sesión como alumno, docente o coordinador antes de poder cargar un juego.')
+        .reprompt('Por favor, inicia sesión pulsando "Soy Alumno", "Soy Docente" o "Soy Coordinador" en la pantalla.')
         .getResponse();
     }
 
-    const idJuego = Alexa.getSlotValue(handlerInput.requestEnvelope, 'idJuego');
-    const juego = juegos.find(j => j.id === Number(idJuego));
+    const tituloJuego = (Alexa.getSlotValue(handlerInput.requestEnvelope, 'tituloJuego') || '').toLowerCase();
 
-    if (!juego) {
-      return handlerInput.responseBuilder
-        .speak(`No encontré ningún juego con el número ${idJuego}. Inténtalo otra vez.`)
-        .reprompt('Por favor, dime el número del juego que quieres cargar.')
-        .getResponse();
-    }
-    
-    sessionAttributes.juego = juego;
-    sessionAttributes.puzleActual = 0;
-    sessionAttributes.puzleIniciado = false;
-    sessionAttributes.puzleTiempoActivo = false;
-    sessionAttributes.fallosPuzle = 0;
-    handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
+    // Llamamos a la función que busca por título (retorna promesa)
+    return db.buscarJuegoPorTitulo(tituloJuego).then(result => {
+      const juegosEncontrados = result.juegos || [];
 
-    const speakOutput = `<speak>Cargando juego número ${idJuego}.<break time="3s"/>${juego.narrativa}</speak>`;
-
-    const mostrarPortadaDirective = {
-      type: 'Alexa.Presentation.HTML.HandleMessage',
-      message: {
-        action: 'mostrar_portada',
-        tipo: juego.tipo_portada
+      if (juegosEncontrados.length === 0) {
+        return handlerInput.responseBuilder
+          .speak(`No encontré ningún juego con el título "${tituloJuego}". Inténtalo otra vez.`)
+          .reprompt('Por favor, dime el título del juego que quieres cargar.')
+          .getResponse();
       }
-    };
 
-    return handlerInput.responseBuilder
-      .speak(speakOutput)
-      .reprompt('¿Quieres empezar los desafíos? Di "sí" para continuar')
-      .addDirective(mostrarPortadaDirective)
-      .getResponse();
+      // Tomamos el primer juego encontrado
+      const juego = juegosEncontrados[0];
+
+      // Guardar info en sesión
+      sessionAttributes.juego = juego;
+      sessionAttributes.puzleActual = 0;
+      sessionAttributes.puzleIniciado = false;
+      sessionAttributes.puzleTiempoActivo = false;
+      sessionAttributes.fallosPuzle = 0;
+      handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
+
+      const speakOutput = `<speak>Cargando juego "${tituloJuego}".<break time="3s"/>${juego.narrativa}</speak>`;
+
+      const mostrarPortadaDirective = {
+        type: 'Alexa.Presentation.HTML.HandleMessage',
+        message: {
+          action: 'mostrar_portada',
+          tipo: juego.tipo_portada
+        }
+      };
+
+      return handlerInput.responseBuilder
+        .speak(speakOutput)
+        .reprompt('¿Quieres empezar los desafíos? Di "sí" para continuar')
+        .addDirective(mostrarPortadaDirective)
+        .getResponse();
+    }).catch(err => {
+      console.error('Error buscando juego por título:', err);
+      return handlerInput.responseBuilder
+        .speak('Hubo un error al cargar el juego. Intenta de nuevo más tarde.')
+        .getResponse();
+    });
   }
 };
 
@@ -395,11 +408,11 @@ const ProcessHTMLMessageHandler = {
             let speakOutput = "";
             if (tipo === "docente") {
               speakOutput = `¡Bienvenido, ${result.nombre}! Has iniciado sesión correctamente. ` +
-                            `Puedes decir: "cargar juego número..." para cargar un juego o ` +
+                            `Puedes decir: "cargar juego..." y a continuación su título para cargar un juego o ` +
                             `"crear nuevo juego" para crear uno nuevo.`;
             } else {
               speakOutput = `¡Bienvenido, ${result.nombre}! Has iniciado sesión correctamente. ` +
-                            `Puedes decir: "cargar juego número..." para cargar un juego o ` +
+                            `Puedes decir: "cargar juego..." y a continuación su título para cargar un juego o ` +
                             `"crear nuevo juego" para crear uno nuevo o ` + 
                             `"generar reportes" para generar un nuevo reporte.`;
             }
@@ -458,7 +471,7 @@ const ProcessHTMLMessageHandler = {
             sessionAttributes.tipoUsuario = 'alumno';
             handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
             const speakOutput = `¡Bienvenido, ${result.nombre}! Has ingresado correctamente. ` +
-              `Puedes decir: "cargar juego número..." para cargar un juego.`;
+              `Puedes decir: "cargar juego..." y a continuación su título para cargar un juego o `;
 
             handlerInput.responseBuilder.addDirective({
               type: 'Alexa.Presentation.HTML.HandleMessage',
@@ -525,7 +538,7 @@ const FallbackIntentHandler = {
   },
   handle(handlerInput) {
     return handlerInput.responseBuilder
-      .speak('No he entendido eso. Por favor, usa la pantalla para interactuar con el juego.')
+      .speak('No he entendido eso. Por favor, inténtalo de nuevo.')
       .withShouldEndSession(false)
       .getResponse();
   }
@@ -552,7 +565,7 @@ const HelpIntentHandler = {
   },
   handle(handlerInput) {
     return handlerInput.responseBuilder
-      .speak('Para jugar, utiliza la pantalla para interactuar con el juego. Si quieres salir, di "salir del juego".')
+      .speak('Para jugar, utiliza la pantalla y los comandos de voz para interactuar con el juego. Si quieres salir, di "salir del juego".')
       .reprompt('¿Qué quieres hacer?')
       .getResponse();
   }

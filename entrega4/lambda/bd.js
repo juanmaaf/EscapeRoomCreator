@@ -111,19 +111,29 @@ async function loginAlumno(nombre, curso, grupo) {
 
 // Listar todos los juegos
 async function listarJuegos() {
-    const params = {
-        TableName: JUEGOS_TABLE
-    };
-
-    const result = await ddb.scan(params).promise();
+    const result = await ddb.scan({ TableName: JUEGOS_TABLE }).promise();
     return { success: true, juegos: result.Items || [] };
 }
 
-// Guardar nuevo juego
+// Guardar nuevo juego (sin duplicados por título)
 async function guardarJuego(juego) {
+    // 1. Comprobar si ya existe el título
+    const existing = await ddb.query({
+        TableName: JUEGOS_TABLE,
+        IndexName: 'TituloIndex',
+        KeyConditionExpression: 'titulo = :t',
+        ExpressionAttributeValues: { ':t': juego.titulo }
+    }).promise();
+
+    if (existing.Items.length > 0) {
+        return { success: false, message: `Ya existe un juego con el título "${juego.titulo}"` };
+    }
+
+    // 2. Guardar juego si no existe
     const item = {
         juegoID: uuidv4(),
         titulo: juego.titulo,
+        tituloNormalizado: juego.titulo.toLowerCase(),
         narrativa: juego.narrativa,
         fallosmaximospuzle: juego.fallosmaximospuzle,
         tipo_portada: juego.tipo_portada,
@@ -132,13 +142,20 @@ async function guardarJuego(juego) {
         fecha_creacion: new Date().toISOString(),
     };
 
+    await ddb.put({ TableName: JUEGOS_TABLE, Item: item }).promise();
+    return { success: true, juego: item };
+}
+
+// Buscar juego por título
+async function buscarJuegoPorTitulo(titulo) {
     const params = {
         TableName: JUEGOS_TABLE,
-        Item: item
+        FilterExpression: 'tituloNormalizado = :t',
+        ExpressionAttributeValues: { ':t': titulo.toLowerCase() }
     };
 
-    await ddb.put(params).promise();
-    return { success: true, juego: item };
+    const result = await ddb.scan(params).promise();
+    return { success: true, juegos: result.Items || [] };
 }
 
 module.exports = { 
@@ -146,5 +163,6 @@ module.exports = {
     loginDocenteCoordinador, 
     loginAlumno, 
     listarJuegos,
-    guardarJuego
+    guardarJuego,
+    buscarJuegoPorTitulo
 };
