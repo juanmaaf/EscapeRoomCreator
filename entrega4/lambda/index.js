@@ -478,6 +478,13 @@ const ProcessHTMLMessageHandler = {
       return db.guardarJuego(juego)
         .then(result => {
           if (result.success) {
+            // Enviar mensaje al frontend indicando que se guardó correctamente
+            handlerInput.responseBuilder.addDirective({
+              type: 'Alexa.Presentation.HTML.HandleMessage',
+              message: { 
+                action: "guardado_juego_exitoso"
+              }
+            }); 
             return handlerInput.responseBuilder
               .speak(`El juego ${result.juego.titulo} se ha guardado correctamente.`)
               .getResponse();

@@ -461,6 +461,11 @@ function handleMessageFromSkill(message) {
     else if (message.action === "abrir_editor_escape_room") {
         mostrarEditorEscapeRoom(message.datos || []);
     }
+    else if (message.action === "guardado_juego_exitoso") {
+        // Mostrar título en el iframe-container
+        const container = document.getElementById('iframe-container');
+        container.innerHTML = `<h1>ESCAPE ROOM CREATOR</h1>`;
+    }
     else {
         logToCloudwatch("Acción no reconocida: " + message.action);
     }
