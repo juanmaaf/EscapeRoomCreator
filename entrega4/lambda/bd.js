@@ -134,7 +134,7 @@ async function guardarJuego(juego) {
         juegoID: uuidv4(),
         titulo: juego.titulo,
         narrativa: juego.narrativa,
-        fallosmaximospuzle: juego.fallosmaximospuzle,
+        fallosMaximosPuzle: juego.fallosmaximospuzle,
         tipo_portada: juego.tipo_portada,
         curso: juego.curso,
         puzles: juego.puzles,

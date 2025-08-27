@@ -296,57 +296,68 @@ const ResolverPuzleIntentHandler = {
     const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
     return !!sessionAttributes.juego && sessionAttributes.puzleIniciado && sessionAttributes.puzleTiempoActivo;
   },
+
   handle(handlerInput) {
     const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
     const puzle = getPuzleActual(sessionAttributes);
     if (!puzle) return finalizarJuego(handlerInput);
 
+    // Inicializar contador de fallos
     sessionAttributes.fallosPuzle = sessionAttributes.fallosPuzle || 0;
+
+    // Normalizar la respuesta del usuario y la correcta
     const slotValor = Alexa.getSlotValue(handlerInput.requestEnvelope, 'respuestaUsuario') || '';
     const respuestaUsuario = normalizar(slotValor);
-    const respuestasCorrectas = (puzle.respuestaCorrecta || []).map(normalizar);
+    const respuestaCorrecta = normalizar(puzle.respuestaCorrecta);
+
+    const maxFallos = sessionAttributes.juego.fallosMaximosPuzle;
+    const numPistas = Array.isArray(puzle.pistas) ? puzle.pistas.length : 0;
+    let falloActual = sessionAttributes.fallosPuzle;
 
     let speakOutput = '';
     let addDirective = null;
 
-    if (respuestasCorrectas.includes(respuestaUsuario)) {
+    if (respuestaUsuario === respuestaCorrecta) {
+      // Respuesta correcta
       avanzarPuzle(sessionAttributes);
       handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
       return pedirContinuar(handlerInput, '¡Correcto!');
+    }
+
+    // Respuesta incorrecta
+    sessionAttributes.fallosPuzle += 1;
+    falloActual = sessionAttributes.fallosPuzle;
+    handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
+
+    if (falloActual <= numPistas) {
+      speakOutput = `No es correcto. ${puzle.pistas[falloActual - 1] || ''}`;
+      if (tienePantalla(handlerInput)) {
+        addDirective = {
+          type: 'Alexa.Presentation.HTML.HandleMessage',
+          message: { action: 'mostrar_pista', pista: puzle.pistas[falloActual - 1] || '' }
+        };
+      }
+    } else if (falloActual < maxFallos) {
+      speakOutput = 'No es correcto. Intenta nuevamente.';
     } else {
-      sessionAttributes.fallosPuzle += 1;
+      // Alcanzó el máximo de fallos
+      avanzarPuzle(sessionAttributes);
       handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
 
-      const maxFallos = sessionAttributes.juego.fallosMaximosPuzle;
-      const numPistas = (puzle.pistas || []).length;
-      const falloActual = sessionAttributes.fallosPuzle;
-
-      if (falloActual <= numPistas) {
-        speakOutput = `No es correcto. ${puzle.pistas[falloActual - 1]}`;
-        if (tienePantalla(handlerInput)) {
-          addDirective = {
-            type: 'Alexa.Presentation.HTML.HandleMessage',
-            message: { action: 'mostrar_pista', pista: puzle.pistas[falloActual - 1] }
-          };
-        }
-      } else if (falloActual < maxFallos) {
-        speakOutput = 'Prueba otra vez.';
+      if (juegoTerminado(sessionAttributes)) {
+        return handlerInput.responseBuilder
+          .speak('Has alcanzado el máximo de intentos de este último desafío. El juego ha terminado.')
+          .withShouldEndSession(true)
+          .getResponse();
       } else {
-        avanzarPuzle(sessionAttributes);
-        handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
-      
-        if (juegoTerminado(sessionAttributes)) {
-          return handlerInput.responseBuilder
-            .speak('Has alcanzado el máximo de intentos de este último desafío. El juego ha terminado.')
-            .withShouldEndSession(true)
-            .getResponse();
-        } else {
-          return pedirContinuar(handlerInput, 'Has alcanzado el máximo de intentos de este desafío. Pasamos al siguiente.');
-        }
+        return pedirContinuar(handlerInput, 'Has alcanzado el máximo de intentos de este desafío. Pasamos al siguiente.');
       }
     }
 
-    const responseBuilder = handlerInput.responseBuilder.speak(speakOutput).reprompt('¿Cuál es tu respuesta?');
+    const responseBuilder = handlerInput.responseBuilder
+      .speak(speakOutput)
+      .reprompt('¿Cuál es tu respuesta?');
+
     if (addDirective) responseBuilder.addDirective(addDirective);
     return responseBuilder.getResponse();
   }
