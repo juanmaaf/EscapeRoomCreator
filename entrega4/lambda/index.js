@@ -155,11 +155,15 @@ const CrearNuevoJuegoIntentHandler = {
         .getResponse();
     }
 
+    // Obtenemos lista de juegos de la BD
+    const result = db.listarJuegos();  
+
     // Enviar mensaje a la web app para cargar el editor
     handlerInput.responseBuilder.addDirective({
       type: 'Alexa.Presentation.HTML.HandleMessage',
       message: {
-        action: 'abrir_editor_escape_room'
+        action: 'abrir_editor_escape_room',
+        datos: result.juegos || []
       }
     });
 
@@ -465,6 +469,29 @@ const ProcessHTMLMessageHandler = {
           console.error(err);
           return handlerInput.responseBuilder
             .speak("Ocurrió un error inesperado. Inténtalo de nuevo.")
+            .getResponse();
+        });
+    }
+    // ===================== GUARDAR NUEVO ESCAPE ROOM =====================
+    if (message.action === "guardar_nuevo_escape_room") {
+      const juego = message.datos;
+    
+      return db.guardarJuego(juego)
+        .then(result => {
+          if (result.success) {
+            return handlerInput.responseBuilder
+              .speak(`El juego ${result.juego.titulo} se ha guardado correctamente.`)
+              .getResponse();
+          } else {
+            return handlerInput.responseBuilder
+              .speak("No se pudo guardar el juego.")
+              .getResponse();
+          }
+        })
+        .catch(err => {
+          console.error("Error al guardar juego:", err);
+          return handlerInput.responseBuilder
+            .speak("Ocurrió un error al guardar el juego.")
             .getResponse();
         });
     }

@@ -9,6 +9,7 @@ const ddb = new AWS.DynamoDB.DocumentClient({ region: 'eu-west-1' });
 /* ===================== TABLAS ===================== */
 
 const USUARIOS_TABLE = 'EscapeRoomUsuarios';
+const JUEGOS_TABLE = 'EscapeRoomJuegos';
 
 /* ===================== MÉTODOS ===================== */
 
@@ -108,4 +109,42 @@ async function loginAlumno(nombre, curso, grupo) {
     return { success: true, userId, nombre };
 }
 
-module.exports = { registrarDocenteCoordinador, loginDocenteCoordinador, loginAlumno };
+// Listar todos los juegos
+async function listarJuegos() {
+    const params = {
+        TableName: JUEGOS_TABLE
+    };
+
+    const result = await ddb.scan(params).promise();
+    return { success: true, juegos: result.Items || [] };
+}
+
+// Guardar nuevo juego
+async function guardarJuego(juego) {
+    const item = {
+        id: uuidv4(),
+        titulo: juego.titulo,
+        narrativa: juego.narrativa,
+        fallosmaximospuzle: juego.fallosmaximospuzle,
+        tipo_portada: juego.tipo_portada,
+        curso: juego.curso,
+        puzles: juego.puzles,
+        fecha_creacion: new Date().toISOString(),
+    };
+
+    const params = {
+        TableName: JUEGOS_TABLE,
+        Item: item
+    };
+
+    await ddb.put(params).promise();
+    return { success: true, juego: item };
+}
+
+module.exports = { 
+    registrarDocenteCoordinador, 
+    loginDocenteCoordinador, 
+    loginAlumno, 
+    listarJuegos,
+    guardarJuego
+};
