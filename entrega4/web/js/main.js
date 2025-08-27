@@ -64,7 +64,7 @@ function mostrarEditorEscapeRoom(juegosExistentes = []) {
             
             <label>Tipo de portada:</label>
             <select id="tipoPortada" style="width:100%; margin-bottom:10px; padding:8px; border:1px solid #d1d5db; border-radius:6px;">
-              <option value="hab_oscura" selected>Habitación Oscura (default)</option>
+              <option value="hab_oscura" selected>Habitación Oscura</option>
               <option value="laboratorio">Laboratorio</option>
               <option value="pasillo">Pasillo</option>
               <option value="sala_miedo">Sala de Miedo</option>
