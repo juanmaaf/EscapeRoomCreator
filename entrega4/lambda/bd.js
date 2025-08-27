@@ -133,7 +133,6 @@ async function guardarJuego(juego) {
     const item = {
         juegoID: uuidv4(),
         titulo: juego.titulo,
-        tituloNormalizado: juego.titulo.toLowerCase(),
         narrativa: juego.narrativa,
         fallosmaximospuzle: juego.fallosmaximospuzle,
         tipo_portada: juego.tipo_portada,
@@ -148,14 +147,10 @@ async function guardarJuego(juego) {
 
 // Buscar juego por título
 async function buscarJuegoPorTitulo(titulo) {
-    const params = {
-        TableName: JUEGOS_TABLE,
-        FilterExpression: 'tituloNormalizado = :t',
-        ExpressionAttributeValues: { ':t': titulo.toLowerCase() }
-    };
+    const result = await ddb.scan({ TableName: JUEGOS_TABLE }).promise();
+    const juegosFiltrados = result.Items.filter(j => j.titulo.toLowerCase() === titulo);
 
-    const result = await ddb.scan(params).promise();
-    return { success: true, juegos: result.Items || [] };
+    return { success: true, juegos: juegosFiltrados };
 }
 
 module.exports = { 

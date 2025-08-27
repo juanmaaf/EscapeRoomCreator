@@ -1,6 +1,4 @@
 const Alexa = require('ask-sdk-core');
-const fs = require('fs');
-const path = require('path');
 const db = require('./bd.js');
 
 /* ===================== HELPERS ===================== */
@@ -53,61 +51,68 @@ function tienePantalla(handlerInput) {
   return !!Alexa.getSupportedInterfaces(handlerInput.requestEnvelope)['Alexa.Presentation.HTML'];
 }
 
-// Inicia (muestra) el puzle actual: marca flags y envía la directiva a HTML
+// Cifrado César
+function cifradoCesar(texto, clave) {
+  let resultado = '';
+  for (let i = 0; i < texto.length; i++) {
+    const c = texto[i];
+    if (c >= 'A' && c <= 'Z') {
+      resultado += String.fromCharCode((c.charCodeAt(0) - 65 + clave) % 26 + 65);
+    } else if (c >= 'a' && c <= 'z') {
+      resultado += String.fromCharCode((c.charCodeAt(0) - 97 + clave) % 26 + 97);
+    } else {
+      resultado += c;
+    }
+  }
+  return resultado;
+}
+
+/* ===================== FUNCIONES PRINCIPALES ===================== */
+
 function iniciarPuzleActual(handlerInput) {
   const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
   const puzle = getPuzleActual(sessionAttributes);
 
-  if (!puzle) {
-    return finalizarJuego(handlerInput);
-  }
+  if (!puzle) return finalizarJuego(handlerInput);
 
   sessionAttributes.puzleIniciado = true;
-  sessionAttributes.puzleTiempoActivo = true; // clave para permitir ResolverPuzle
+  sessionAttributes.puzleTiempoActivo = true;
   handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
+
+  const respuesta = puzle.respuestaCorrecta || '';
+  let mensajeCifrado = respuesta;
+
+  if (puzle.tipo === "cifrado-cesar") {
+    const clave = Number(puzle.claveCifrado) || 0;
+    mensajeCifrado = cifradoCesar(respuesta, clave);
+  }
 
   const response = handlerInput.responseBuilder
     .speak(`Aquí está tu desafío: ${puzle.instruccion}`)
     .reprompt('¿Cuál es tu respuesta?');
 
-  if (tienePantalla(handlerInput)) {
-    response.addDirective({
-      type: 'Alexa.Presentation.HTML.HandleMessage',
-      message: {
-        action: "mostrar_puzle",
-        datos: puzle.datos,
-        tipo: puzle.tipo,
-        instruccion: puzle.instruccion,
-        tiempoMaximo: puzle.tiempoEstimadoSegundos
-      }
-    });
-  }
+  response.addDirective({
+    type: 'Alexa.Presentation.HTML.HandleMessage',
+    message: {
+      action: "mostrar_puzle",
+      datos: mensajeCifrado,
+      tipo: puzle.tipo,
+      instruccion: puzle.instruccion,
+      tiempoMaximo: puzle.tiempoEstimadoSegundos
+    }
+  });
 
   return response.getResponse();
 }
 
-// Cuando termina un puzle (correcto/tiempo/skip), dejamos preparado para “sí”
 function pedirContinuar(handlerInput, texto) {
   const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-  // En este punto ya hemos hecho avanzarPuzle() o marcado el fin
-  if (juegoTerminado(sessionAttributes)) {
-    return finalizarJuego(handlerInput);
-  }
+  if (juegoTerminado(sessionAttributes)) return finalizarJuego(handlerInput);
+
   return handlerInput.responseBuilder
     .speak(`${texto} ¿Quieres continuar con el siguiente desafío? Di "sí" para continuar.`)
     .reprompt('¿Quieres continuar?')
     .getResponse();
-}
-
-/* ===================== CARGA JUEGOS ===================== */
-
-let juegos = [];
-try {
-  const data = fs.readFileSync(path.resolve(__dirname, 'juegos.json'), 'utf8');
-  juegos = JSON.parse(data);
-  console.log(`Cargados ${juegos.length} juegos desde juegos.json`);
-} catch (error) {
-  console.error('Error leyendo juegos.json:', error);
 }
 
 /* ===================== HANDLERS ===================== */
@@ -147,9 +152,7 @@ const CrearNuevoJuegoIntentHandler = {
   },
   handle(handlerInput) {
     const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-
-    // Solo docentes registrados pueden crear juegos
-    if (sessionAttributes.tipoUsuario !== 'docente' && sessionAttributes.tipoUsuario !== 'coordinador') {
+    if (!['docente', 'coordinador'].includes(sessionAttributes.tipoUsuario)) {
       return handlerInput.responseBuilder
         .speak('Solo los docentes y coordinadores registrados pueden crear nuevos juegos.')
         .getResponse();
@@ -158,7 +161,6 @@ const CrearNuevoJuegoIntentHandler = {
     return db.listarJuegos()
       .then(result => {
         if (result.success) {
-          // Enviar mensaje a la web app para cargar el editor con la lista de juegos
           handlerInput.responseBuilder.addDirective({
             type: 'Alexa.Presentation.HTML.HandleMessage',
             message: {
@@ -166,7 +168,6 @@ const CrearNuevoJuegoIntentHandler = {
               datos: result.juegos || []
             }
           });
-
           return handlerInput.responseBuilder
             .speak('Abriendo el editor de <lang xml:lang="en-US">escape rooms</lang>. Usa la pantalla para crear tu juego.')
             .getResponse();
@@ -182,7 +183,7 @@ const CrearNuevoJuegoIntentHandler = {
           .speak("Ocurrió un error al intentar abrir el editor de juegos.")
           .getResponse();
       });
-    }
+  }
 };
   
 const IntentSinJuegoHandler = {
@@ -212,37 +213,29 @@ const IntentSinJuegoHandler = {
 
 const CargarEscapeRoomIntentHandler = {
   canHandle(handlerInput) {
-    if (Alexa.getRequestType(handlerInput.requestEnvelope) !== 'IntentRequest') return false;
-    return Alexa.getIntentName(handlerInput.requestEnvelope) === 'CargarEscapeRoom';
+    return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' &&
+           Alexa.getIntentName(handlerInput.requestEnvelope) === 'CargarEscapeRoom';
   },
   handle(handlerInput) {
     const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-
-    // Comprobar si hay usuario logueado
     if (!sessionAttributes.usuarioLogueado) {
       return handlerInput.responseBuilder
-        .speak('Debes iniciar sesión como alumno, docente o coordinador antes de poder cargar un juego.')
-        .reprompt('Por favor, inicia sesión pulsando "Soy Alumno", "Soy Docente" o "Soy Coordinador" en la pantalla.')
+        .speak('Debes iniciar sesión antes de cargar un juego.')
+        .reprompt('Por favor, inicia sesión pulsando "Soy Alumno", "Soy Docente" o "Soy Coordinador".')
         .getResponse();
     }
 
     const tituloJuego = (Alexa.getSlotValue(handlerInput.requestEnvelope, 'tituloJuego') || '').toLowerCase();
-
-    // Llamamos a la función que busca por título (retorna promesa)
     return db.buscarJuegoPorTitulo(tituloJuego).then(result => {
       const juegosEncontrados = result.juegos || [];
-
-      if (juegosEncontrados.length === 0) {
+      if (!juegosEncontrados.length) {
         return handlerInput.responseBuilder
-          .speak(`No encontré ningún juego con el título "${tituloJuego}". Inténtalo otra vez.`)
-          .reprompt('Por favor, dime el título del juego que quieres cargar.')
+          .speak(`No encontré ningún juego con el título "${tituloJuego}".`)
+          .reprompt('Intenta decir el título del juego que quieres cargar.')
           .getResponse();
       }
 
-      // Tomamos el primer juego encontrado
       const juego = juegosEncontrados[0];
-
-      // Guardar info en sesión
       sessionAttributes.juego = juego;
       sessionAttributes.puzleActual = 0;
       sessionAttributes.puzleIniciado = false;
@@ -252,18 +245,14 @@ const CargarEscapeRoomIntentHandler = {
 
       const speakOutput = `<speak>Cargando juego "${tituloJuego}".<break time="3s"/>${juego.narrativa}</speak>`;
 
-      const mostrarPortadaDirective = {
+      handlerInput.responseBuilder.addDirective({
         type: 'Alexa.Presentation.HTML.HandleMessage',
-        message: {
-          action: 'mostrar_portada',
-          tipo: juego.tipo_portada
-        }
-      };
+        message: { action: 'mostrar_portada', tipo: juego.tipo_portada }
+      });
 
       return handlerInput.responseBuilder
         .speak(speakOutput)
         .reprompt('¿Quieres empezar los desafíos? Di "sí" para continuar')
-        .addDirective(mostrarPortadaDirective)
         .getResponse();
     }).catch(err => {
       console.error('Error buscando juego por título:', err);
