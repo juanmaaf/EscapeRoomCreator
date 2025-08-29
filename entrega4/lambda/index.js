@@ -186,38 +186,44 @@ const CrearNuevoJuegoIntentHandler = {
            Alexa.getIntentName(handlerInput.requestEnvelope) === 'CrearNuevoJuego';
   },
   handle(handlerInput) {
-    const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-    if (!['docente', 'coordinador'].includes(sessionAttributes.tipoUsuario)) {
-      return handlerInput.responseBuilder
-        .speak('Solo los docentes y coordinadores registrados pueden crear nuevos juegos.')
-        .getResponse();
-    }
-
-    return db.listarJuegos()
-      .then(result => {
-        if (result.success) {
-          handlerInput.responseBuilder.addDirective({
-            type: 'Alexa.Presentation.HTML.HandleMessage',
-            message: {
-              action: 'abrir_editor_escape_room',
-              datos: result.juegos || []
-            }
-          });
-          return handlerInput.responseBuilder
-            .speak('Abriendo el editor de <lang xml:lang="en-US">escape rooms</lang>. Usa la pantalla para crear tu juego.')
-            .getResponse();
-        } else {
-          return handlerInput.responseBuilder
-            .speak('No se pudo obtener la lista de juegos.')
-            .getResponse();
-        }
-      })
-      .catch(err => {
-        console.error("Error al listar juegos:", err);
+    return obtenerSesionActual(handlerInput).then(sesion => {
+      if (!['docente', 'coordinador'].includes(sesion.tipoUsuario)) {
         return handlerInput.responseBuilder
-          .speak("Ocurrió un error al intentar abrir el editor de juegos.")
+          .speak('Solo los docentes y coordinadores registrados pueden crear nuevos juegos.')
           .getResponse();
-      });
+      }
+
+      return db.listarJuegos()
+        .then(result => {
+          if (result.success) {
+            handlerInput.responseBuilder.addDirective({
+              type: 'Alexa.Presentation.HTML.HandleMessage',
+              message: {
+                action: 'abrir_editor_escape_room',
+                datos: result.juegos || []
+              }
+            });
+            return handlerInput.responseBuilder
+              .speak('Abriendo el editor de <lang xml:lang="en-US">escape rooms</lang>. Usa la pantalla para crear tu juego.')
+              .getResponse();
+          } else {
+            return handlerInput.responseBuilder
+              .speak('No se pudo obtener la lista de juegos.')
+              .getResponse();
+          }
+        })
+        .catch(err => {
+          console.error("Error al listar juegos:", err);
+          return handlerInput.responseBuilder
+            .speak("Ocurrió un error al intentar abrir el editor de juegos.")
+            .getResponse();
+        });
+    }).catch(err => {
+      console.error('Error obteniendo sesión en CrearNuevoJuegoIntentHandler:', err);
+      return handlerInput.responseBuilder
+        .speak('Ocurrió un error al verificar tu sesión. Intenta de nuevo.')
+        .getResponse();
+    });
   }
 };
   
@@ -226,23 +232,35 @@ const IntentSinJuegoHandler = {
     if (Alexa.getRequestType(handlerInput.requestEnvelope) !== 'IntentRequest') return false;
 
     const intentName = Alexa.getIntentName(handlerInput.requestEnvelope);
-    const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-    const tieneJuegoCargado = !!sessionAttributes.juego;
-    const puzleEmpezado = sessionAttributes.puzleIniciado === true;
-
-    return (intentName === 'AMAZON.YesIntent' && !tieneJuegoCargado) ||
-           (intentName === 'ResolverPuzle' && (!tieneJuegoCargado || !puzleEmpezado));
+    return intentName === 'AMAZON.YesIntent' || intentName === 'ResolverPuzle';
   },
   handle(handlerInput) {
-    const intentName = Alexa.getIntentName(handlerInput.requestEnvelope);
-    const speakOutput = (intentName === 'AMAZON.YesIntent')
-      ? 'No hay ningún juego cargado actualmente. Puedes decir "cargar juego..." y a continuación el título para empezar un juego.'
-      : 'No hay ningún desafío iniciado. Primero debes iniciar un puzle antes de intentar resolverlo.';
+    return obtenerSesionActual(handlerInput).then(sesion => {
+      const intentName = Alexa.getIntentName(handlerInput.requestEnvelope);
 
-    return handlerInput.responseBuilder
-      .speak(speakOutput)
-      .reprompt('Puedes decir "cargar juego número..." para iniciar un juego.')
-      .getResponse();
+      if (!sesion || !sesion.juegoID) {
+        const speakOutput = (intentName === 'AMAZON.YesIntent')
+          ? 'No hay ningún juego cargado actualmente. Puedes decir "cargar juego..." y a continuación el título para empezar un juego.'
+          : 'No hay ningún desafío iniciado. Primero debes cargar un juego antes de intentar resolver un puzle.';
+        return handlerInput.responseBuilder
+          .speak(speakOutput)
+          .reprompt('Puedes decir "cargar juego número..." para iniciar un juego.')
+          .getResponse();
+      }
+
+      if (intentName === 'ResolverPuzle' && (!sesion.puzleIniciado || !sesion.puzleTiempoActivo)) {
+        return handlerInput.responseBuilder
+          .speak('No hay un desafío en curso. Primero inicia un puzle diciendo "Sí" para comenzar.')
+          .reprompt('Di "Sí" para iniciar el siguiente desafío.')
+          .getResponse();
+      }
+      return false;
+    }).catch(err => {
+      console.error('Error en IntentSinJuegoHandler:', err);
+      return handlerInput.responseBuilder
+        .speak('Ocurrió un error al comprobar la sesión. Intenta de nuevo.')
+        .getResponse();
+    });
   }
 };
 
@@ -311,13 +329,6 @@ const YesIntentHandler = {
   },
   handle(handlerInput) {
     return obtenerSesionActual(handlerInput).then(sesion => {
-      if (!sesion.juegoID) {
-        return handlerInput.responseBuilder
-          .speak('No tienes ningún juego cargado. Primero debes cargar un juego para poder continuar.')
-          .reprompt('Por favor, carga un juego diciendo: "Cargar juego..." y el título del juego.')
-          .getResponse();
-      }
-
       if (sesion.puzleIniciado) {
         return handlerInput.responseBuilder
           .speak('Ya tienes un desafío en curso. Dime tu respuesta.')
@@ -347,20 +358,6 @@ const ResolverPuzleIntentHandler = {
 
   handle(handlerInput) {
     return obtenerSesionActual(handlerInput).then(sesion => {
-      if (!sesion.juegoID) {
-        return handlerInput.responseBuilder
-          .speak('No tienes ningún juego cargado. Primero debes cargar un juego.')
-          .reprompt('Por favor, carga un juego diciendo: "Cargar juego..." y el título del juego.')
-          .getResponse();
-      }
-
-      if (!sesion.puzleIniciado || !sesion.puzleTiempoActivo) {
-        return handlerInput.responseBuilder
-          .speak('No hay un desafío en curso. Por favor, primero inicia el desafío diciendo "Sí" para comenzar el siguiente puzle.')
-          .reprompt('Di "Sí" para iniciar el siguiente desafío.')
-          .getResponse();
-      }
-
       // Obtener el juego completo desde DB
       return buscarJuegoPorID(sesion.juegoID).then(resultadoJuego => {
         if (!resultadoJuego.success || !resultadoJuego.juego) {
@@ -474,21 +471,34 @@ const ProcessHTMLMessageHandler = {
 
     if (message.action === "log_debug") console.log("[FRONTEND DEBUG]", message.message);
     if (message.action === "tiempo_acabado") {
-      const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-      sessionAttributes.puzleIniciado = false;
-      sessionAttributes.puzleTiempoActivo = false;
-      sessionAttributes.fallosPuzle = 0;
-      avanzarPuzle(sessionAttributes);
-      handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
+      return obtenerSesionActual(handlerInput).then(sesion => {
+        sesion.puzleIniciado = false;
+        sesion.puzleTiempoActivo = false;
+        sesion.fallosPuzle = 0;
     
-      if (juegoTerminado(sessionAttributes)) {
+        avanzarPuzle(sesion);
+    
+        return db.actualizarSesion(sesion.userID, sesion.sesionID, sesion).then(() => {
+          if (juegoTerminado(sesion)) {
+            return handlerInput.responseBuilder
+              .speak('¡Se acabó el tiempo en el último desafío! El juego ha terminado.')
+              .withShouldEndSession(true)
+              .getResponse();
+          } else {
+            return pedirContinuar(handlerInput, sesion, '¡Se acabó el tiempo!');
+          }
+        }).catch(err => {
+          console.error('Error actualizando sesión tras tiempo acabado:', err);
+          return handlerInput.responseBuilder
+            .speak('Ocurrió un error al procesar el fin del tiempo. Intenta de nuevo.')
+            .getResponse();
+        });
+      }).catch(err => {
+        console.error('Error obteniendo sesión tras tiempo acabado:', err);
         return handlerInput.responseBuilder
-          .speak('¡Se acabó el tiempo en el último desafío! El juego ha terminado.')
-          .withShouldEndSession(true)
+          .speak('Ocurrió un error al procesar el fin del tiempo. Intenta de nuevo.')
           .getResponse();
-      } else {
-        return pedirContinuar(handlerInput, '¡Se acabó el tiempo!');
-      }
+      });
     }
 
     // ===================== LOGIN / REGISTRO =====================
