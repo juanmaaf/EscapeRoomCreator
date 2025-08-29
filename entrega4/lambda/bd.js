@@ -10,9 +10,11 @@ const ddb = new AWS.DynamoDB.DocumentClient({ region: 'eu-west-1' });
 
 const USUARIOS_TABLE = 'EscapeRoomUsuarios';
 const JUEGOS_TABLE = 'EscapeRoomJuegos';
+const SESIONES_TABLE = 'EscapeRoomSesiones';
 
 /* ===================== MÉTODOS ===================== */
 
+/* ---------------------- USUARIOS ------------------------ */
 // Registro docente/coordinador
 async function registrarDocenteCoordinador({ nombre, usuario, password, tipo }) {
     if (!['docente', 'coordinador'].includes(tipo)) {
@@ -109,6 +111,8 @@ async function loginAlumno(nombre, curso, grupo) {
     return { success: true, userId, nombre };
 }
 
+/* ---------------------- JUEGOS ------------------------ */
+
 // Listar todos los juegos
 async function listarJuegos() {
     const result = await ddb.scan({ TableName: JUEGOS_TABLE }).promise();
@@ -153,11 +157,80 @@ async function buscarJuegoPorTitulo(titulo) {
     return { success: true, juegos: juegosFiltrados };
 }
 
+/* ---------------------- SESIONES ------------------------ */
+
+// Crear Sesión
+async function crearSesion(userID, tipoUsuario, juegoID = null) {
+    const sesionID = uuidv4();
+    const item = {
+        userID,
+        sesionID,
+        tipoUsuario,
+        juegoID,
+        puzleActual: 0,
+        puzleIniciado: false,
+        puzleTiempoActivo: false,
+        fallosPuzle: 0,
+        fechaCreacion: new Date().toISOString()
+    };
+
+    await ddb.put({ TableName: SESIONES_TABLE, Item: item }).promise();
+    return { success: true, sesionID, item };
+}
+
+// Obtener Sesión
+async function obtenerSesion(userID, sesionID) {
+    const params = {
+        TableName: SESIONES_TABLE,
+        Key: { userID, sesionID }
+    };
+    const result = await ddb.get(params).promise();
+    return result.Item || null;
+}
+
+// Actualizar Sesión
+async function actualizarSesion(userID, sesionID, cambios) {
+    const updateExpr = [];
+    const exprAttrValues = {};
+
+    for (const key in cambios) {
+        updateExpr.push(`${key} = :${key}`);
+        exprAttrValues[`:${key}`] = cambios[key];
+    }
+
+    const params = {
+        TableName: SESIONES_TABLE,
+        Key: { userID, sesionID },
+        UpdateExpression: `SET ${updateExpr.join(', ')}`,
+        ExpressionAttributeValues: exprAttrValues,
+        ReturnValues: "ALL_NEW"
+    };
+
+    const result = await ddb.update(params).promise();
+    return result.Attributes;
+}
+
+// Borrar Sesión
+async function eliminarSesion(userID, sesionID) {
+    const params = {
+        TableName: SESIONES_TABLE,
+        Key: { userID, sesionID }
+    };
+    await ddb.delete(params).promise();
+    return { success: true };
+}
+
+/* ---------------------- EXPORTS ------------------------ */
+
 module.exports = { 
     registrarDocenteCoordinador, 
     loginDocenteCoordinador, 
     loginAlumno, 
     listarJuegos,
     guardarJuego,
-    buscarJuegoPorTitulo
+    buscarJuegoPorTitulo,
+    crearSesion,
+    obtenerSesion,
+    actualizarSesion,
+    eliminarSesion
 };

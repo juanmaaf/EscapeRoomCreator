@@ -3,6 +3,23 @@ const db = require('./bd.js');
 
 /* ===================== HELPERS ===================== */
 
+// Obtener sesión actual desde BD
+function obtenerSesionActual(handlerInput) {
+  const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
+  const { userID, sesionID } = sessionAttributes;
+
+  if (!userID || !sesionID) {
+    return Promise.resolve(null);
+  }
+
+  return db.obtenerSesion(userID, sesionID)
+    .then(item => item)
+    .catch(err => {
+      console.error("Error obteniendo la sesión actual:", err);
+      return null;
+    });
+}
+
 // Avanza al siguiente puzle y deja el estado listo para pedir "sí" del usuario.
 function avanzarPuzle(sessionAttributes) {
   sessionAttributes.puzleActual += 1;
@@ -216,48 +233,54 @@ const CargarEscapeRoomIntentHandler = {
            Alexa.getIntentName(handlerInput.requestEnvelope) === 'CargarEscapeRoom';
   },
   handle(handlerInput) {
-    const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-    if (!sessionAttributes.usuarioLogueado) {
-      return handlerInput.responseBuilder
-        .speak('Debes iniciar sesión antes de cargar un juego.')
-        .reprompt('Por favor, inicia sesión pulsando "Soy Alumno", "Soy Docente" o "Soy Coordinador".')
-        .getResponse();
-    }
-
-    const tituloJuego = (Alexa.getSlotValue(handlerInput.requestEnvelope, 'tituloJuego') || '').toLowerCase();
-    return db.buscarJuegoPorTitulo(tituloJuego).then(result => {
-      const juegosEncontrados = result.juegos || [];
-      if (!juegosEncontrados.length) {
+    // Obtener la sesión actual desde BD
+    return obtenerSesionActual(handlerInput).then(sesion => {
+      if (!sesion) {
         return handlerInput.responseBuilder
-          .speak(`No encontré ningún juego con el título "${tituloJuego}".`)
-          .reprompt('Intenta decir el título del juego que quieres cargar.')
+          .speak('Debes iniciar sesión antes de cargar un juego.')
+          .reprompt('Por favor, inicia sesión diciendo "Soy Alumno", "Soy Docente" o "Soy Coordinador".')
           .getResponse();
       }
 
-      const juego = juegosEncontrados[0];
-      sessionAttributes.juego = juego;
-      sessionAttributes.puzleActual = 0;
-      sessionAttributes.puzleIniciado = false;
-      sessionAttributes.puzleTiempoActivo = false;
-      sessionAttributes.fallosPuzle = 0;
-      handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
+      const { userID, sesionID } = sesion;
+      const tituloJuego = (Alexa.getSlotValue(handlerInput.requestEnvelope, 'tituloJuego') || '').toLowerCase();
 
-      const speakOutput = `<speak>Cargando juego "${tituloJuego}".<break time="3s"/>${juego.narrativa}</speak>`;
+      return db.buscarJuegoPorTitulo(tituloJuego).then(result => {
+        const juegosEncontrados = result.juegos || [];
+        if (!juegosEncontrados.length) {
+          return handlerInput.responseBuilder
+            .speak(`No encontré ningún juego con el título "${tituloJuego}".`)
+            .reprompt('Intenta decir el título del juego que quieres cargar.')
+            .getResponse();
+        }
 
-      handlerInput.responseBuilder.addDirective({
-        type: 'Alexa.Presentation.HTML.HandleMessage',
-        message: { action: 'mostrar_portada', tipo: juego.tipo_portada }
+        const juego = juegosEncontrados[0];
+        // Actualizar sesión en BD
+        return db.actualizarSesion(userID, sesionID, {
+          juegoID: juego.juegoID,
+          puzleActual: 0,
+          puzleIniciado: false,
+          puzleTiempoActivo: false,
+          fallosPuzle: 0
+        }).then(() => {
+          const speakOutput = `<speak>Cargando juego "${tituloJuego}".<break time="3s"/>${juego.narrativa}</speak>`;
+
+          handlerInput.responseBuilder.addDirective({
+            type: 'Alexa.Presentation.HTML.HandleMessage',
+            message: { action: 'mostrar_portada', tipo: juego.tipo_portada }
+          });
+
+          return handlerInput.responseBuilder
+            .speak(speakOutput)
+            .reprompt('¿Quieres empezar los desafíos? Di "sí" para continuar')
+            .getResponse();
+        });
+      }).catch(err => {
+        console.error('Error buscando juego o actualizando sesión:', err);
+        return handlerInput.responseBuilder
+          .speak('Hubo un error al cargar el juego. Intenta de nuevo más tarde.')
+          .getResponse();
       });
-
-      return handlerInput.responseBuilder
-        .speak(speakOutput)
-        .reprompt('¿Quieres empezar los desafíos? Di "sí" para continuar')
-        .getResponse();
-    }).catch(err => {
-      console.error('Error buscando juego por título:', err);
-      return handlerInput.responseBuilder
-        .speak('Hubo un error al cargar el juego. Intenta de nuevo más tarde.')
-        .getResponse();
     });
   }
 };
@@ -399,29 +422,36 @@ const ProcessHTMLMessageHandler = {
       return db.loginDocenteCoordinador(usuario, password, tipo)
         .then(result => {
           if (result.success) {
-            const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-            sessionAttributes.usuarioLogueado = usuario;
-            sessionAttributes.tipoUsuario = tipo;
-            handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
+            // Crear sesión en BD incluyendo el tipo de usuario
+            return db.crearSesion(result.userId, tipo, null)
+              .then(sesion => {
+                const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
+                sessionAttributes.userID = sesion.item.userID;
+                sessionAttributes.sesionID = sesion.item.sesionID;
+                handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
     
-            let speakOutput = "";
-            if (tipo === "docente") {
-              speakOutput = `¡Bienvenido, ${result.nombre}! Has iniciado sesión correctamente. ` +
-                            `Puedes decir: "cargar juego..." y a continuación su título para cargar un juego o ` +
-                            `"crear nuevo juego" para crear uno nuevo.`;
-            } else {
-              speakOutput = `¡Bienvenido, ${result.nombre}! Has iniciado sesión correctamente. ` +
-                            `Puedes decir: "cargar juego..." y a continuación su título para cargar un juego o ` +
-                            `"crear nuevo juego" para crear uno nuevo o ` + 
-                            `"generar reportes" para generar un nuevo reporte.`;
-            }
+                let speakOutput = "";
+                if (tipo === "docente") {
+                  speakOutput = `¡Bienvenido, ${result.nombre}! Has iniciado sesión correctamente. ` +
+                                `Puedes decir: "cargar juego..." y a continuación su título para cargar un juego o ` +
+                                `"crear nuevo juego" para crear uno nuevo.`;
+                } else {
+                  speakOutput = `¡Bienvenido, ${result.nombre}! Has iniciado sesión correctamente. ` +
+                                `Puedes decir: "cargar juego..." y a continuación su título para cargar un juego o ` +
+                                `"crear nuevo juego" para crear uno nuevo o ` + 
+                                `"generar reportes" para generar un nuevo reporte.`;
+                }
     
-            handlerInput.responseBuilder.addDirective({
-              type: 'Alexa.Presentation.HTML.HandleMessage',
-              message: { action: "login_exitoso", tipoUsuario: tipo }
-            });
+                handlerInput.responseBuilder.addDirective({
+                  type: 'Alexa.Presentation.HTML.HandleMessage',
+                  message: { 
+                    action: "login_exitoso", 
+                    tipoUsuario: tipo
+                  }
+                });
     
-            return handlerInput.responseBuilder.speak(speakOutput).getResponse();
+                return handlerInput.responseBuilder.speak(speakOutput).getResponse();
+              });
           } else {
             return handlerInput.responseBuilder
               .speak(`Error: ${result.message}`)
@@ -462,27 +492,33 @@ const ProcessHTMLMessageHandler = {
 
     if (message.action === "login_alumno") {
       const { nombre, curso, grupo } = message.datos;
+    
       return db.loginAlumno(nombre, curso, grupo)
         .then(result => {
           if (result.success) {
-            const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-            sessionAttributes.usuarioLogueado = nombre;
-            sessionAttributes.tipoUsuario = 'alumno';
-            handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
-            const speakOutput = `¡Bienvenido, ${result.nombre}! Has ingresado correctamente. ` +
-              `Puedes decir: "cargar juego..." y a continuación su título para cargar un juego o `;
-
-            handlerInput.responseBuilder.addDirective({
-              type: 'Alexa.Presentation.HTML.HandleMessage',
-              message: { 
-                action: "login_exitoso", 
-                tipoUsuario: "alumno" 
-              }
-            }); 
-
-            return handlerInput.responseBuilder
-              .speak(speakOutput)
-              .getResponse();
+            // Crear sesión en BD incluyendo el tipo de usuario
+            return db.crearSesion(result.userId, "alumno", null)
+              .then(sesion => {
+                const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
+                sessionAttributes.userID = sesion.item.userID;
+                sessionAttributes.sesionID = sesion.item.sesionID;
+                handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
+    
+                const speakOutput = `¡Bienvenido, ${result.nombre}! Has ingresado correctamente. ` +
+                                    `Puedes decir: "cargar juego..." y a continuación su título para cargar un juego.`;
+    
+                handlerInput.responseBuilder.addDirective({
+                  type: 'Alexa.Presentation.HTML.HandleMessage',
+                  message: { 
+                    action: "login_exitoso", 
+                    tipoUsuario: "alumno"
+                  }
+                });
+    
+                return handlerInput.responseBuilder
+                  .speak(speakOutput)
+                  .getResponse();
+              });
           } else {
             return handlerInput.responseBuilder
               .speak("Ocurrió un error al iniciar sesión como alumno. Inténtalo de nuevo.")
