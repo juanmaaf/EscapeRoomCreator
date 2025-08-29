@@ -21,30 +21,38 @@ function obtenerSesionActual(handlerInput) {
 }
 
 // Avanza al siguiente puzle y deja el estado listo para pedir "sí" del usuario.
-function avanzarPuzle(sessionAttributes) {
-  sessionAttributes.puzleActual += 1;
-  sessionAttributes.puzleIniciado = false;
-  sessionAttributes.puzleTiempoActivo = false;
-  sessionAttributes.fallosPuzle = 0;
+function avanzarPuzle(sesion) {
+  sesion.puzleActual = (sesion.puzleActual || 0) + 1;
+  sesion.puzleIniciado = false;
+  sesion.puzleTiempoActivo = false;
+  sesion.fallosPuzle = 0;
 }
 
 // ¿Ya terminó el juego?
-function juegoTerminado(sessionAttributes) {
-  const juego = sessionAttributes.juego;
-  return !juego || sessionAttributes.puzleActual >= juego.puzles.length;
+function juegoTerminado(sesion) {
+  const juego = sesion.juego;
+  return !juego || (sesion.puzleActual >= (juego.puzles ? juego.puzles.length : 0));
 }
 
 // Finaliza juego con mensaje estándar
-function finalizarJuego(handlerInput) {
-  const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-  sessionAttributes.juego = null;
-  sessionAttributes.puzleActual = null;
-  handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
-
-  return handlerInput.responseBuilder
-    .speak('¡Has completado todos los desafíos! ¡Felicidades, has terminado el juego!')
-    .withShouldEndSession(true)
-    .getResponse();
+function finalizarJuego(handlerInput, sesion) {
+  return db.actualizarSesion(sesion.userID, sesion.sesionID, {
+    juegoID: null,
+    puzleActual: null,
+    puzleIniciado: false,
+    puzleTiempoActivo: false,
+    fallosPuzle: 0
+  }).then(() => {
+    return handlerInput.responseBuilder
+      .speak('¡Has completado todos los desafíos! ¡Felicidades, has terminado el juego!')
+      .withShouldEndSession(true)
+      .getResponse();
+  }).catch(err => {
+    console.error("Error finalizando juego:", err);
+    return handlerInput.responseBuilder
+      .speak('Ocurrió un error al finalizar el juego. Intenta de nuevo.')
+      .getResponse();
+  });
 }
 
 // Normaliza string (minúsculas, sin acentos)
@@ -56,9 +64,8 @@ function normalizar(s) {
 }
 
 // Obtiene el puzle actual (o null si no hay)
-function getPuzleActual(sessionAttributes) {
-  const juego = sessionAttributes.juego;
-  const idx = sessionAttributes.puzleActual || 0;
+function getPuzleActual(sesion, juego) {
+  const idx = sesion.puzleActual || 0;
   if (!juego || !juego.puzles || idx >= juego.puzles.length) return null;
   return juego.puzles[idx];
 }
@@ -85,45 +92,57 @@ function cifradoCesar(texto, clave) {
 
 /* ===================== FUNCIONES PRINCIPALES ===================== */
 
-function iniciarPuzleActual(handlerInput) {
-  const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-  const puzle = getPuzleActual(sessionAttributes);
+function iniciarPuzleActual(handlerInput, sesion) {
+  const juego = sesion.juego;
+  const puzleActualIndex = sesion.puzleActual || 0;
+  const puzle = juego && juego.puzles && juego.puzles[puzleActualIndex];
 
-  if (!puzle) return finalizarJuego(handlerInput);
+  if (!puzle) return finalizarJuego(handlerInput, sesion);
 
-  sessionAttributes.puzleIniciado = true;
-  sessionAttributes.puzleTiempoActivo = true;
-  handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
+  // Actualizamos la sesión en BD
+  sesion.puzleIniciado = true;
+  sesion.puzleTiempoActivo = true;
 
-  const respuesta = (puzle.respuestaCorrecta || '').toUpperCase();
-  let mensajeCifrado = respuesta;
-
-  if (puzle.tipo === "cifrado-cesar") {
-    const clave = Number(puzle.claveCifrado) || 0;
-    mensajeCifrado = cifradoCesar(respuesta, clave);
-  }
-
-  const response = handlerInput.responseBuilder
-    .speak(`Aquí está tu desafío: ${puzle.instruccion}`)
-    .reprompt('¿Cuál es tu respuesta?');
-
-  response.addDirective({
-    type: 'Alexa.Presentation.HTML.HandleMessage',
-    message: {
-      action: "mostrar_puzle",
-      datos: mensajeCifrado,
-      tipo: puzle.tipo,
-      instruccion: puzle.instruccion,
-      tiempoMaximo: puzle.tiempoEstimadoSegundos
+  return db.actualizarSesion(sesion.userID, sesion.sesionID, {
+    puzleIniciado: true,
+    puzleTiempoActivo: true
+  }).then(() => {
+    // Enviamos la info del puzle al frontend
+    const respuesta = (puzle.respuestaCorrecta || '').toUpperCase();
+    let mensajeCifrado = respuesta;
+    if (puzle.tipo === "cifrado-cesar") {
+      const clave = Number(puzle.claveCifrado) || 0;
+      mensajeCifrado = cifradoCesar(respuesta, clave);
     }
-  });
 
-  return response.getResponse();
+    const response = handlerInput.responseBuilder
+      .speak(`Aquí está tu desafío: ${puzle.instruccion}`)
+      .reprompt('¿Cuál es tu respuesta?');
+
+    response.addDirective({
+      type: 'Alexa.Presentation.HTML.HandleMessage',
+      message: {
+        action: "mostrar_puzle",
+        datos: mensajeCifrado,
+        tipo: puzle.tipo,
+        instruccion: puzle.instruccion,
+        tiempoMaximo: puzle.tiempoEstimadoSegundos
+      }
+    });
+
+    return response.getResponse();
+  }).catch(err => {
+    console.error("Error iniciando puzle:", err);
+    return handlerInput.responseBuilder
+      .speak('Ocurrió un error al iniciar el desafío. Intenta de nuevo.')
+      .getResponse();
+  });
 }
 
-function pedirContinuar(handlerInput, texto) {
-  const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-  if (juegoTerminado(sessionAttributes)) return finalizarJuego(handlerInput);
+function pedirContinuar(handlerInput, sesion, texto) {
+  if (juegoTerminado(sesion)) {
+    return finalizarJuego(handlerInput, sesion);
+  }
 
   return handlerInput.responseBuilder
     .speak(`${texto} ¿Quieres continuar con el siguiente desafío? Di "sí" para continuar.`)
@@ -289,99 +308,157 @@ const YesIntentHandler = {
   canHandle(handlerInput) {
     if (Alexa.getRequestType(handlerInput.requestEnvelope) !== 'IntentRequest') return false;
     if (Alexa.getIntentName(handlerInput.requestEnvelope) !== 'AMAZON.YesIntent') return false;
-
-    const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-    return !!sessionAttributes.juego;
   },
   handle(handlerInput) {
-    const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-    const puzleIniciado = sessionAttributes.puzleIniciado === true;
+    return obtenerSesionActual(handlerInput).then(sesion => {
+      if (!sesion.juegoID) {
+        return handlerInput.responseBuilder
+          .speak('No tienes ningún juego cargado. Primero debes cargar un juego para poder continuar.')
+          .reprompt('Por favor, carga un juego diciendo: "Cargar juego..." y el título del juego.')
+          .getResponse();
+      }
 
-    if (puzleIniciado) {
+      if (sesion.puzleIniciado) {
+        return handlerInput.responseBuilder
+          .speak('Ya tienes un desafío en curso. Dime tu respuesta.')
+          .reprompt('¿Cuál es tu respuesta?')
+          .getResponse();
+      }
+
+      if (juegoTerminado(sesion)) {
+        return finalizarJuego(handlerInput, sesion);
+      }
+
+      return iniciarPuzleActual(handlerInput, sesion);
+    }).catch(err => {
+      console.error("Error en YesIntentHandler:", err);
       return handlerInput.responseBuilder
-        .speak('Ya tienes un desafío en curso. Dime tu respuesta')
-        .reprompt('¿Cuál es tu respuesta?')
+        .speak('Ocurrió un error al iniciar el desafío. Intenta de nuevo.')
         .getResponse();
-    }
-
-    if (juegoTerminado(sessionAttributes)) return finalizarJuego(handlerInput);
-
-    return iniciarPuzleActual(handlerInput);
+    });
   }
 };
 
 const ResolverPuzleIntentHandler = {
   canHandle(handlerInput) {
-    if (Alexa.getRequestType(handlerInput.requestEnvelope) !== 'IntentRequest') return false;
-    if (Alexa.getIntentName(handlerInput.requestEnvelope) !== 'ResolverPuzle') return false;
-
-    const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-    return !!sessionAttributes.juego && sessionAttributes.puzleIniciado && sessionAttributes.puzleTiempoActivo;
+    return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' &&
+           Alexa.getIntentName(handlerInput.requestEnvelope) === 'ResolverPuzle';
   },
 
   handle(handlerInput) {
-    const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-    const puzle = getPuzleActual(sessionAttributes);
-    if (!puzle) return finalizarJuego(handlerInput);
-
-    // Inicializar contador de fallos
-    sessionAttributes.fallosPuzle = sessionAttributes.fallosPuzle || 0;
-
-    // Normalizar la respuesta del usuario y la correcta
-    const slotValor = Alexa.getSlotValue(handlerInput.requestEnvelope, 'respuestaUsuario') || '';
-    const respuestaUsuario = normalizar(slotValor);
-    const respuestaCorrecta = normalizar(puzle.respuestaCorrecta);
-
-    const maxFallos = sessionAttributes.juego.fallosMaximosPuzle;
-    const numPistas = Array.isArray(puzle.pistas) ? puzle.pistas.length : 0;
-    let falloActual = sessionAttributes.fallosPuzle;
-
-    let speakOutput = '';
-    let addDirective = null;
-
-    if (respuestaUsuario === respuestaCorrecta) {
-      // Respuesta correcta
-      avanzarPuzle(sessionAttributes);
-      handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
-      return pedirContinuar(handlerInput, '¡Correcto!');
-    }
-
-    // Respuesta incorrecta
-    sessionAttributes.fallosPuzle += 1;
-    falloActual = sessionAttributes.fallosPuzle;
-    handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
-
-    if (falloActual <= numPistas) {
-      speakOutput = `No es correcto. ${puzle.pistas[falloActual - 1] || ''}`;
-      if (tienePantalla(handlerInput)) {
-        addDirective = {
-          type: 'Alexa.Presentation.HTML.HandleMessage',
-          message: { action: 'mostrar_pista', pista: puzle.pistas[falloActual - 1] || '' }
-        };
-      }
-    } else if (falloActual < maxFallos) {
-      speakOutput = 'No es correcto. Intenta nuevamente.';
-    } else {
-      // Alcanzó el máximo de fallos
-      avanzarPuzle(sessionAttributes);
-      handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
-
-      if (juegoTerminado(sessionAttributes)) {
+    return obtenerSesionActual(handlerInput).then(sesion => {
+      if (!sesion.juegoID) {
         return handlerInput.responseBuilder
-          .speak('Has alcanzado el máximo de intentos de este último desafío. El juego ha terminado.')
-          .withShouldEndSession(true)
+          .speak('No tienes ningún juego cargado. Primero debes cargar un juego.')
+          .reprompt('Por favor, carga un juego diciendo: "Cargar juego..." y el título del juego.')
           .getResponse();
-      } else {
-        return pedirContinuar(handlerInput, 'Has alcanzado el máximo de intentos de este desafío. Pasamos al siguiente.');
       }
-    }
 
-    const responseBuilder = handlerInput.responseBuilder
-      .speak(speakOutput)
-      .reprompt('¿Cuál es tu respuesta?');
+      if (!sesion.puzleIniciado || !sesion.puzleTiempoActivo) {
+        return handlerInput.responseBuilder
+          .speak('No hay un desafío en curso. Por favor, primero inicia el desafío diciendo "Sí" para comenzar el siguiente puzle.')
+          .reprompt('Di "Sí" para iniciar el siguiente desafío.')
+          .getResponse();
+      }
 
-    if (addDirective) responseBuilder.addDirective(addDirective);
-    return responseBuilder.getResponse();
+      // Obtener el juego completo desde DB
+      return buscarJuegoPorID(sesion.juegoID).then(resultadoJuego => {
+        if (!resultadoJuego.success || !resultadoJuego.juego) {
+          return handlerInput.responseBuilder
+            .speak('El juego cargado no se encuentra disponible. Por favor, carga otro juego.')
+            .reprompt('Carga un juego diciendo: "Cargar juego..." y el título del juego.')
+            .getResponse();
+        }
+
+        const juego = resultadoJuego.juego;
+        const puzle = getPuzleActual(sesion, juego);
+        if (!puzle) {
+          return finalizarJuego(handlerInput, sesion);
+        }
+
+        sesion.fallosPuzle = sesion.fallosPuzle || 0;
+
+        const slotValor = Alexa.getSlotValue(handlerInput.requestEnvelope, 'respuestaUsuario') || '';
+        const respuestaUsuario = normalizar(slotValor);
+        const respuestaCorrecta = normalizar(puzle.respuestaCorrecta);
+
+        const maxFallos = juego.fallosMaximosPuzle;
+        const numPistas = Array.isArray(puzle.pistas) ? puzle.pistas.length : 0;
+        let falloActual = sesion.fallosPuzle;
+
+        let speakOutput = '';
+        let addDirective = null;
+
+        if (respuestaUsuario === respuestaCorrecta) {
+          // Respuesta correcta: avanzar al siguiente puzle
+          avanzarPuzle(sesion);
+
+          return db.actualizarSesion(sesion.userID, sesion.sesionID, sesion)
+            .then(() => pedirContinuar(handlerInput, sesion))
+            .catch(err => {
+              console.error('Error actualizando sesión:', err);
+              return handlerInput.responseBuilder
+                .speak('Ocurrió un error al actualizar el progreso. Intenta de nuevo.')
+                .getResponse();
+            });
+        }
+
+        // Respuesta incorrecta
+        sesion.fallosPuzle += 1;
+        falloActual = sesion.fallosPuzle;
+
+        return db.actualizarSesion(sesion.userID, sesion.sesionID, sesion).then(() => {
+          if (falloActual <= numPistas) {
+            speakOutput = `No es correcto. ${puzle.pistas[falloActual - 1] || ''}`;
+            if (tienePantalla(handlerInput)) {
+              addDirective = {
+                type: 'Alexa.Presentation.HTML.HandleMessage',
+                message: { action: 'mostrar_pista', pista: puzle.pistas[falloActual - 1] || '' }
+              };
+            }
+          } else if (falloActual < maxFallos) {
+            speakOutput = 'No es correcto. Intenta nuevamente.';
+          } else {
+            // Alcanzó el máximo de fallos
+            avanzarPuzle(sesion);
+
+            return db.actualizarSesion(sesion.userID, sesion.sesionID, sesion).then(() => {
+              if (juegoTerminado(sesion, juego)) {
+                return handlerInput.responseBuilder
+                  .speak('Has alcanzado el máximo de intentos de este último desafío. El juego ha terminado.')
+                  .withShouldEndSession(true)
+                  .getResponse();
+              } else {
+                return pedirContinuar(handlerInput, sesion, 'Has alcanzado el máximo de intentos de este desafío. Pasamos al siguiente.');
+              }
+            });
+          }
+
+          const responseBuilder = handlerInput.responseBuilder
+            .speak(speakOutput)
+            .reprompt('¿Cuál es tu respuesta?');
+
+          if (addDirective) responseBuilder.addDirective(addDirective);
+          return responseBuilder.getResponse();
+        }).catch(err => {
+          console.error('Error actualizando sesión tras fallo:', err);
+          return handlerInput.responseBuilder
+            .speak('Ocurrió un error al procesar tu respuesta. Intenta de nuevo.')
+            .getResponse();
+        });
+
+      }).catch(err => {
+        console.error('Error obteniendo juego en ResolverPuzleIntentHandler:', err);
+        return handlerInput.responseBuilder
+          .speak('Ocurrió un error al procesar tu respuesta. Intenta de nuevo.')
+          .getResponse();
+      });
+    }).catch(err => {
+      console.error('Error obteniendo sesión en ResolverPuzleIntentHandler:', err);
+      return handlerInput.responseBuilder
+        .speak('Ocurrió un error al procesar tu respuesta. Intenta de nuevo.')
+        .getResponse();
+    });
   }
 };
 

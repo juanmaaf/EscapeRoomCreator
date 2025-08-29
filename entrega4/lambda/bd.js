@@ -157,6 +157,19 @@ async function buscarJuegoPorTitulo(titulo) {
     return { success: true, juegos: juegosFiltrados };
 }
 
+// Buscar juego por ID
+async function buscarJuegoPorID(juegoID) {
+    if (!juegoID) return { success: false, juego: null };
+
+    const params = {
+        TableName: JUEGOS_TABLE,
+        Key: { juegoID }
+    };
+
+    const result = await ddb.get(params).promise();
+    return { success: true, juego: result.Item };
+}
+
 /* ---------------------- SESIONES ------------------------ */
 
 // Crear Sesión
@@ -229,6 +242,7 @@ module.exports = {
     listarJuegos,
     guardarJuego,
     buscarJuegoPorTitulo,
+    buscarJuegoPorID,
     crearSesion,
     obtenerSesion,
     actualizarSesion,
