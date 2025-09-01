@@ -240,7 +240,22 @@ async function eliminarSesion(userID, sesionID) {
 
 /* ---------------------- RESULTADOS ------------------------ */
 
+// Guardar resultado de una sesión
+async function guardarResultado({ userID, fallosTotales, puzlesSuperados, fechaInicioJuego, fechaFinJuego }) {
+    const resultadoID = uuidv4();
 
+    const item = {
+        userID,
+        resultadoID,
+        fallosTotales: fallosTotales || 0,
+        puzlesSuperados: puzlesSuperados || 0,
+        fechaInicioJuego: fechaInicioJuego || new Date().toISOString(),
+        fechaFinJuego: fechaFinJuego || new Date().toISOString()
+    };
+
+    await ddb.put({ TableName: RESULTADOS_TABLE, Item: item }).promise();
+    return { success: true, resultadoID };
+}
 
 /* ---------------------- EXPORTS ------------------------ */
 
@@ -255,5 +270,6 @@ module.exports = {
     crearSesion,
     obtenerSesion,
     actualizarSesion,
-    eliminarSesion
+    eliminarSesion,
+    guardarResultado
 };

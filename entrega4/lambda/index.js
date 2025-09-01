@@ -52,10 +52,17 @@ async function finalizarJuego(handlerInput, sesion) {
     const fechaFin = new Date().toISOString();
     sesion.fechaFinJuego = fechaFin;
 
-    // Actualizar sesión con fecha de fin
-    await db.actualizarSesion(sesion.userID, sesion.sesionID, { fechaFinJuego: fechaFin });
+    // Guardar resultado antes de eliminar la sesión
+    await guardarResultado({
+      userID: sesion.userID,
+      fallosTotales: sesion.fallosTotales,
+      puzlesSuperados: sesion.puzlesSuperados,
+      fechaInicioJuego: sesion.fechaInicioJuego,
+      fechaFinJuego: fechaFin
+    });
 
-    //await db.eliminarSesion(sesion.userID, sesion.sesionID);
+    // Eliminar sesión
+    await eliminarSesion(sesion.userID, sesion.sesionID);
 
     return handlerInput.responseBuilder
       .speak('¡Has completado todos los desafíos! ¡Felicidades, has terminado el juego!')
@@ -484,7 +491,16 @@ const ResolverPuzleIntentHandler = {
           // Registrar fecha de fin de juego
           const fechaFin = new Date().toISOString();
           sesion.fechaFinJuego = fechaFin;
-          await db.actualizarSesion(sesion.userID, sesion.sesionID, { fechaFinJuego: fechaFin });
+          
+          await guardarResultado({
+            userID: sesion.userID,
+            fallosTotales: sesion.fallosTotales,
+            puzlesSuperados: sesion.puzlesSuperados,
+            fechaInicioJuego: sesion.fechaInicioJuego,
+            fechaFinJuego: fechaFin
+          });
+        
+          await eliminarSesion(sesion.userID, sesion.sesionID);
 
           return handlerInput.responseBuilder
             .speak('Has alcanzado el máximo de intentos de este último desafío. El juego ha terminado.')
@@ -559,7 +575,16 @@ const ProcessHTMLMessageHandler = {
           // Registrar fecha de fin de juego
           const fechaFin = new Date().toISOString();
           sesion.fechaFinJuego = fechaFin;
-          await db.actualizarSesion(sesion.userID, sesion.sesionID, { fechaFinJuego: fechaFin });
+          
+          await guardarResultado({
+            userID: sesion.userID,
+            fallosTotales: sesion.fallosTotales,
+            puzlesSuperados: sesion.puzlesSuperados,
+            fechaInicioJuego: sesion.fechaInicioJuego,
+            fechaFinJuego: fechaFin
+          });
+        
+          await eliminarSesion(sesion.userID, sesion.sesionID);
 
           return handlerInput.responseBuilder
             .speak('¡Se acabó el tiempo en el último desafío! El juego ha terminado.')
