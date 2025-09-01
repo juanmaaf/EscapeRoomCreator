@@ -11,6 +11,7 @@ const ddb = new AWS.DynamoDB.DocumentClient({ region: 'eu-west-1' });
 const USUARIOS_TABLE = 'EscapeRoomUsuarios';
 const JUEGOS_TABLE = 'EscapeRoomJuegos';
 const SESIONES_TABLE = 'EscapeRoomSesiones';
+const RESULTADOS_TABLE = 'EscapeRoomResultados';
 
 /* ===================== MÉTODOS ===================== */
 
@@ -184,6 +185,10 @@ async function crearSesion(userID, tipoUsuario, juegoID = null) {
         puzleIniciado: false,
         puzleTiempoActivo: false,
         fallosPuzle: 0,
+        fallosTotales: 0,
+        puzlesSuperados: 0,
+        fechaInicioJuego: null,
+        fechaFinJuego: null,
         fechaCreacion: new Date().toISOString()
     };
 
@@ -232,6 +237,10 @@ async function eliminarSesion(userID, sesionID) {
     await ddb.delete(params).promise();
     return { success: true };
 }
+
+/* ---------------------- RESULTADOS ------------------------ */
+
+
 
 /* ---------------------- EXPORTS ------------------------ */
 
