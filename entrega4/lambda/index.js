@@ -21,12 +21,16 @@ async function obtenerSesionActual(handlerInput) {
   }
 }
 
-// Avanza al siguiente puzle y deja el estado listo para pedir "sí" del usuario.
-function avanzarPuzle(sesion) {
+// Avanza al siguiente puzle
+function avanzarPuzle(sesion, completadoCorrectamente = true) {
   sesion.puzleActual = (sesion.puzleActual || 0) + 1;
   sesion.puzleIniciado = false;
   sesion.puzleTiempoActivo = false;
   sesion.fallosPuzle = 0;
+
+  if (completadoCorrectamente) {
+    sesion.puzlesSuperados = (sesion.puzlesSuperados || 0) + 1;
+  }
 }
 
 // ¿Ya terminó el juego?
@@ -44,7 +48,14 @@ async function juegoTerminado(sesion) {
 // Finaliza juego con mensaje estándar
 async function finalizarJuego(handlerInput, sesion) {
   try {
-    await db.eliminarSesion(sesion.userID, sesion.sesionID);
+    // Registrar fecha de fin de juego
+    const fechaFin = new Date().toISOString();
+    sesion.fechaFinJuego = fechaFin;
+
+    // Actualizar sesión con fecha de fin
+    await db.actualizarSesion(sesion.userID, sesion.sesionID, { fechaFinJuego: fechaFin });
+
+    //await db.eliminarSesion(sesion.userID, sesion.sesionID);
 
     return handlerInput.responseBuilder
       .speak('¡Has completado todos los desafíos! ¡Felicidades, has terminado el juego!')
@@ -297,6 +308,10 @@ const CargarEscapeRoomIntentHandler = {
         puzleIniciado: false,
         puzleTiempoActivo: false,
         fallosPuzle: 0,
+        fallosTotales: 0,
+        puzlesSuperados: 0,
+        fechaInicioJuego: new Date().toISOString(),
+        fechaFinJuego: null
       });
 
       const speakOutput = `<speak>Cargando juego "${tituloJuego}".<break time="3s"/>${juego.narrativa}</speak>`;
@@ -415,12 +430,12 @@ const ResolverPuzleIntentHandler = {
         const mensaje = `¡Respuesta correcta! ${puzle.narrativa} `;
 
         // Respuesta correcta
-        avanzarPuzle(sesion);
+        avanzarPuzle(sesion, true);
         await db.actualizarSesion(sesion.userID, sesion.sesionID, {
           puzleActual: sesion.puzleActual,
           puzleIniciado: sesion.puzleIniciado,
           puzleTiempoActivo: sesion.puzleTiempoActivo,
-          fallosPuzle: sesion.fallosPuzle
+          puzlesSuperados: sesion.puzlesSuperados
         });
 
         const terminado = await juegoTerminado(sesion);
@@ -433,8 +448,10 @@ const ResolverPuzleIntentHandler = {
 
       // Respuesta incorrecta
       sesion.fallosPuzle += 1;
+      sesion.fallosTotales = (sesion.fallosTotales || 0) + 1;
       await db.actualizarSesion(sesion.userID, sesion.sesionID, {
-        fallosPuzle: sesion.fallosPuzle
+        fallosPuzle: sesion.fallosPuzle,
+        fallosTotales: sesion.fallosTotales
       });
 
       let speakOutput = '';
@@ -452,7 +469,7 @@ const ResolverPuzleIntentHandler = {
         speakOutput = 'No es correcto. Intenta nuevamente.';
       } else {
         // Alcanzó máximo de fallos
-        avanzarPuzle(sesion);
+        avanzarPuzle(sesion, false);
         await db.actualizarSesion(sesion.userID, sesion.sesionID, {
           puzleActual: sesion.puzleActual,
           puzleIniciado: sesion.puzleIniciado,
@@ -462,6 +479,11 @@ const ResolverPuzleIntentHandler = {
 
         const terminado = await juegoTerminado(sesion);
         if (terminado) {
+          // Registrar fecha de fin de juego
+          const fechaFin = new Date().toISOString();
+          sesion.fechaFinJuego = fechaFin;
+          await db.actualizarSesion(sesion.userID, sesion.sesionID, { fechaFinJuego: fechaFin });
+
           return handlerInput.responseBuilder
             .speak('Has alcanzado el máximo de intentos de este último desafío. El juego ha terminado.')
             .withShouldEndSession(true)
@@ -521,7 +543,7 @@ const ProcessHTMLMessageHandler = {
         sesion.puzleTiempoActivo = false;
         sesion.fallosPuzle = 0;
     
-        avanzarPuzle(sesion);
+        avanzarPuzle(sesion, false);
     
         await db.actualizarSesion(sesion.userID, sesion.sesionID, {
             puzleActual: sesion.puzleActual,
@@ -532,6 +554,11 @@ const ProcessHTMLMessageHandler = {
     
         const terminado = await juegoTerminado(sesion);
         if (terminado) {
+          // Registrar fecha de fin de juego
+          const fechaFin = new Date().toISOString();
+          sesion.fechaFinJuego = fechaFin;
+          await db.actualizarSesion(sesion.userID, sesion.sesionID, { fechaFinJuego: fechaFin });
+
           return handlerInput.responseBuilder
             .speak('¡Se acabó el tiempo en el último desafío! El juego ha terminado.')
             .withShouldEndSession(true)
@@ -541,7 +568,7 @@ const ProcessHTMLMessageHandler = {
         }
       }
 
-      // ===================== LOGIN / REGISTRO DOCENTE / COORDINADOR =====================
+      // ===================== LOGIN DOCENTE / COORDINADOR =====================
       if (["login_docente", "login_coordinador"].includes(message.action)) {
         const { usuario, password } = message.datos;
         const tipo = message.action === "login_docente" ? "docente" : "coordinador";
@@ -690,7 +717,17 @@ const CancelAndStopIntentHandler = {
     const intentName = Alexa.getIntentName(handlerInput.requestEnvelope);
     return intentName === 'AMAZON.CancelIntent' || intentName === 'AMAZON.StopIntent';
   },
-  handle(handlerInput) {
+  handle: async (handlerInput) => {
+    try {
+      const sesion = await obtenerSesionActual(handlerInput);
+      if (sesion && sesion.userID && sesion.sesionID) {
+        await db.eliminarSesion(sesion.userID, sesion.sesionID);
+        console.log(`Sesión eliminada: ${sesion.userID} / ${sesion.sesionID}`);
+      }
+    } catch (err) {
+      console.error("Error al eliminar la sesión al salir de la skill:", err);
+    }
+
     return handlerInput.responseBuilder
       .speak('Adiós, espero que vuelvas a intentarlo pronto.')
       .withShouldEndSession(true)
@@ -711,13 +748,24 @@ const HelpIntentHandler = {
   }
 };
 
-// NUEVO: manejar cierre de sesión
+// Cierre de sesión
 const SessionEndedRequestHandler = {
   canHandle(handlerInput) {
     return Alexa.getRequestType(handlerInput.requestEnvelope) === 'SessionEndedRequest';
   },
-  handle(handlerInput) {
+  handle: async (handlerInput) => {
     console.log("Session ended:", handlerInput.requestEnvelope.request.reason);
+
+    try {
+      const sesion = await obtenerSesionActual(handlerInput);
+      if (sesion && sesion.userID && sesion.sesionID) {
+        await db.eliminarSesion(sesion.userID, sesion.sesionID);
+        console.log(`Sesión eliminada: ${sesion.userID} / ${sesion.sesionID}`);
+      }
+    } catch (err) {
+      console.error("Error al eliminar la sesión al cerrar la skill:", err);
+    }
+
     return handlerInput.responseBuilder.getResponse();
   }
 };
