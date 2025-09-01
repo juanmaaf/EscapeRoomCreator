@@ -128,10 +128,12 @@ async function iniciarPuzleActual(handlerInput, sesion) {
     // Actualizamos la sesión
     sesion.puzleIniciado = true;
     sesion.puzleTiempoActivo = true;
+    sesion.fallosPuzle = 0;
 
     await db.actualizarSesion(sesion.userID, sesion.sesionID, {
       puzleIniciado: true,
-      puzleTiempoActivo: true
+      puzleTiempoActivo: true,
+      fallosPuzle: 0
     });
 
     // Preparar el mensaje cifrado si aplica
