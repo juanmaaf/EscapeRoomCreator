@@ -257,6 +257,43 @@ async function guardarResultado({ userID, fallosTotales, puzlesSuperados, fechaI
     return { success: true, resultadoID };
 }
 
+// Obtener los resultados de un alumno
+async function obtenerResultadosAlumno(nombre, curso, grupo) {
+    const nombreCursoGrupo = `${nombre}#${curso}#${grupo}`;
+
+    // 1. Buscar al alumno en la tabla de usuarios
+    const paramsQueryAlumno = {
+        TableName: USUARIOS_TABLE,
+        IndexName: 'AlumnosIndex',
+        KeyConditionExpression: 'tipo = :tipo AND nombreCursoGrupo = :ncg',
+        ExpressionAttributeValues: {
+            ':tipo': 'alumno',
+            ':ncg': nombreCursoGrupo
+        }
+    };
+
+    const resultAlumno = await ddb.query(paramsQueryAlumno).promise();
+    if (resultAlumno.Items.length === 0) {
+        return { success: false, message: 'Alumno no encontrado' };
+    }
+
+    const alumno = resultAlumno.Items[0];
+    const userID = alumno.userID;
+
+    // 2. Buscar todos los resultados del alumno
+    const paramsResultados = {
+        TableName: RESULTADOS_TABLE,
+        KeyConditionExpression: 'userID = :uid',
+        ExpressionAttributeValues: {
+            ':uid': userID
+        }
+    };
+
+    const resultResultados = await ddb.query(paramsResultados).promise();
+
+    return { success: true, resultados: resultResultados.Items || [] };
+}
+
 /* ---------------------- EXPORTS ------------------------ */
 
 module.exports = { 
@@ -271,5 +308,6 @@ module.exports = {
     obtenerSesion,
     actualizarSesion,
     eliminarSesion,
-    guardarResultado
+    guardarResultado,
+    obtenerResultadosAlumno
 };

@@ -273,6 +273,70 @@ const CrearNuevoJuegoIntentHandler = {
   },
 };
 
+const ObtenerResultadosAlumnoIntentHandler = {
+  canHandle(handlerInput) {
+    return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' &&
+           Alexa.getIntentName(handlerInput.requestEnvelope) === 'ObtenerResultadosAlumno';
+  },
+
+  handle: async (handlerInput) => {
+    try {
+      const sesion = await obtenerSesionActual(handlerInput);
+
+      if (!sesion || !['docente', 'coordinador'].includes(sesion.tipoUsuario)) {
+        return handlerInput.responseBuilder
+          .speak('Solo los docentes y coordinadores registrados pueden consultar los resultados de los alumnos.')
+          .getResponse();
+      }
+
+      const nombre = Alexa.getSlotValue(handlerInput.requestEnvelope, 'nombre');
+      const curso = Alexa.getSlotValue(handlerInput.requestEnvelope, 'curso');
+      const grupo = Alexa.getSlotValue(handlerInput.requestEnvelope, 'grupo');
+
+      if (!nombre || !curso || !grupo) {
+        return handlerInput.responseBuilder
+          .speak('Necesito el nombre, el curso y el grupo del alumno para buscar sus resultados.')
+          .reprompt('Por favor, dime el nombre, curso y grupo del alumno.')
+          .getResponse();
+      }
+
+      const resultadosData = await obtenerResultadosAlumno(nombre, curso, grupo);
+
+      if (!resultadosData.success) {
+        return handlerInput.responseBuilder
+          .speak(resultadosData.message || 'No se encontraron resultados para ese alumno.')
+          .getResponse();
+      }
+
+      const resultados = resultadosData.resultados;
+
+      if (resultados.length === 0) {
+        return handlerInput.responseBuilder
+          .speak(`El alumno ${nombre} del curso ${curso} y grupo ${grupo} no tiene resultados registrados.`)
+          .getResponse();
+      }
+
+      handlerInput.responseBuilder.addDirective({
+        type: 'Alexa.Presentation.HTML.HandleMessage',
+        message: {
+          action: 'mostrar_resultados_alumno',
+          datos: resultados
+        }
+      });
+
+      return handlerInput.responseBuilder
+        .speak(`Mostrando resultados de ${nombre} en la pantalla.`)
+        .getResponse();
+
+    } catch (err) {
+      console.error('Error en ObtenerResultadosAlumnoIntentHandler:', err);
+      return handlerInput.responseBuilder
+        .speak('Ocurrió un error al obtener los resultados del alumno. Intenta de nuevo.')
+        .getResponse();
+    }
+  }
+};
+
 const CargarEscapeRoomIntentHandler = {
   canHandle(handlerInput) {
     return (
@@ -803,6 +867,7 @@ exports.handler = Alexa.SkillBuilders.custom()
   .addRequestHandlers(
     LaunchRequestHandler,
     CrearNuevoJuegoIntentHandler,
+    ObtenerResultadosAlumnoIntentHandler,
     CargarEscapeRoomIntentHandler,
     YesIntentHandler,
     ResolverPuzleIntentHandler,
