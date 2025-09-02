@@ -259,9 +259,16 @@ async function guardarResultado({ userID, fallosTotales, puzlesSuperados, fechaI
 
 // Obtener los resultados de un alumno
 async function obtenerResultadosAlumno(nombre, curso, grupo) {
-    const nombreCursoGrupo = `${nombre}#${curso}#${grupo}`;
+    // Normalización: 
+    // - Nombre: primera letra mayúscula, resto minúscula
+    // - Grupo: mayúsculas
+    // - Curso: string tal cual
+    const nombreNormalizado = nombre.charAt(0).toUpperCase() + nombre.slice(1).toLowerCase();
+    const grupoNormalizado = grupo.toUpperCase();
+    const cursoStr = curso.toString();
 
-    // 1. Buscar al alumno en la tabla de usuarios
+    const nombreCursoGrupo = `${nombreNormalizado}#${cursoStr}#${grupoNormalizado}`;
+
     const paramsQueryAlumno = {
         TableName: USUARIOS_TABLE,
         IndexName: 'AlumnosIndex',
@@ -273,14 +280,13 @@ async function obtenerResultadosAlumno(nombre, curso, grupo) {
     };
 
     const resultAlumno = await ddb.query(paramsQueryAlumno).promise();
-    if (resultAlumno.Items.length === 0) {
+    if (!resultAlumno.Items || resultAlumno.Items.length === 0) {
         return { success: false, message: 'Alumno no encontrado' };
     }
 
     const alumno = resultAlumno.Items[0];
     const userID = alumno.userID;
 
-    // 2. Buscar todos los resultados del alumno
     const paramsResultados = {
         TableName: RESULTADOS_TABLE,
         KeyConditionExpression: 'userID = :uid',
