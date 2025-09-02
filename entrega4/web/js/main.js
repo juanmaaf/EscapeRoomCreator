@@ -510,6 +510,47 @@ function handleMessageFromSkill(message) {
         const container = document.getElementById('iframe-container');
         container.innerHTML = `<h1>ESCAPE ROOM CREATOR</h1>`;
     }
+    else if (message.action === "mostrar_resultados_alumno") {
+      const resultados = message.datos || [];
+      const container = document.getElementById('iframe-container');
+  
+      if (resultados.length === 0) {
+          container.innerHTML = "<p>No hay resultados para mostrar.</p>";
+          return;
+      }
+  
+      let html = `
+        <h2>Resultados del alumno</h2>
+        <div style="
+          display: flex; 
+          flex-direction: column; 
+          gap: 10px;
+          padding: 10px;
+          max-height: 70vh;
+          overflow-y: auto;
+        ">
+      `;
+  
+      resultados.forEach((item, index) => {
+          const inicio = new Date(item.fechaInicioJuego);
+          const fin = new Date(item.fechaFinJuego);
+          const tiempoSegundos = Math.floor((fin - inicio) / 1000);
+  
+          html += `
+            <div style="border: 1px solid #ccc; padding: 10px; border-radius: 8px;">
+              <strong>Resultado ${index + 1}</strong><br>
+              Fallos Totales: ${item.fallosTotales}<br>
+              Puzles Superados: ${item.puzlesSuperados}<br>
+              Inicio: ${inicio.toLocaleString()}<br>
+              Fin: ${fin.toLocaleString()}<br>
+              ⏱️ Tiempo total: ${tiempoSegundos} segundos
+            </div>
+          `;
+      });
+  
+      html += "</div>";
+      container.innerHTML = html;
+    }
     else {
         logToCloudwatch("Acción no reconocida: " + message.action);
     }
