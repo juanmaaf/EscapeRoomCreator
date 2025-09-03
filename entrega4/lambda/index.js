@@ -474,6 +474,69 @@ const GenerarReporteClaseIntentHandler = {
   },
 };
 
+const ObtenerReporteClaseIntentHandler = {
+  canHandle(handlerInput) {
+    return (
+      Alexa.getRequestType(handlerInput.requestEnvelope) === "IntentRequest" &&
+      Alexa.getIntentName(handlerInput.requestEnvelope) === "ObtenerReporteClase"
+    );
+  },
+
+  handle: async (handlerInput) => {
+    try {
+      const sesion = await obtenerSesionActual(handlerInput);
+
+      if (!sesion || sesion.tipoUsuario !== "coordinador") {
+        return handlerInput.responseBuilder
+          .speak("Solo los coordinadores pueden consultar reportes de clases.")
+          .getResponse();
+      }
+
+      const curso = Alexa.getSlotValue(handlerInput.requestEnvelope, "curso");
+      const grupo = Alexa.getSlotValue(handlerInput.requestEnvelope, "grupo");
+
+      console.log(`ObtenerReporteClase slots -> curso: ${curso}, grupo: ${grupo}`);
+
+      if (!curso || !grupo) {
+        return handlerInput.responseBuilder
+          .speak("Necesito el curso y el grupo para mostrar los reportes.")
+          .reprompt("Por favor, dime el curso y grupo de la clase.")
+          .getResponse();
+      }
+
+      // Llamada a tu método de DB
+      const reportesData = await db.obtenerReportesClase(curso, grupo);
+
+      if (!reportesData.success || !reportesData.reportes.length) {
+        return handlerInput.responseBuilder
+          .speak(reportesData.message || `No se encontraron reportes para el curso ${curso} grupo ${grupo}.`)
+          .getResponse();
+      }
+
+      const reportes = reportesData.reportes;
+
+      // Enviar los reportes a la pantalla
+      handlerInput.responseBuilder.addDirective({
+        type: "Alexa.Presentation.HTML.HandleMessage",
+        message: {
+          action: "mostrar_reportes_clase",
+          datos: reportes,
+        },
+      });
+
+      return handlerInput.responseBuilder
+        .speak(`Mostrando ${reportes.length} reportes del curso ${curso}, grupo ${grupo}.`)
+        .getResponse();
+
+    } catch (err) {
+      console.error("Error en ObtenerReporteClaseIntentHandler:", err);
+      return handlerInput.responseBuilder
+        .speak("Ocurrió un error al obtener los reportes de la clase. Intenta de nuevo.")
+        .getResponse();
+    }
+  },
+};
+
 /* ---------------------- JUGABILIDAD ------------------------ */
 
 const YesIntentHandler = {
@@ -942,6 +1005,7 @@ exports.handler = Alexa.SkillBuilders.custom()
     CrearNuevoJuegoIntentHandler,
     ObtenerResultadosAlumnoIntentHandler,
     GenerarReporteClaseIntentHandler,
+    ObtenerReporteClaseIntentHandler,
     CargarEscapeRoomIntentHandler,
     YesIntentHandler,
     ResolverPuzleIntentHandler,
