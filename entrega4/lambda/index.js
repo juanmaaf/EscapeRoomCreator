@@ -198,6 +198,8 @@ async function pedirContinuar(handlerInput, sesion, texto) {
 
 /* ===================== HANDLERS ===================== */
 
+/* ---------------------- INICIO ------------------------ */
+
 const LaunchRequestHandler = {
   canHandle(handlerInput) {
     return Alexa.getRequestType(handlerInput.requestEnvelope) === 'LaunchRequest';
@@ -225,6 +227,8 @@ const LaunchRequestHandler = {
     }
   }
 };
+
+/* ---------------------- CREAR / CARGAR JUEGO ------------------------ */
 
 const CrearNuevoJuegoIntentHandler = {
   canHandle(handlerInput) {
@@ -272,6 +276,78 @@ const CrearNuevoJuegoIntentHandler = {
     }
   },
 };
+
+const CargarEscapeRoomIntentHandler = {
+  canHandle(handlerInput) {
+    return (
+      Alexa.getRequestType(handlerInput.requestEnvelope) === "IntentRequest" &&
+      Alexa.getIntentName(handlerInput.requestEnvelope) === "CargarEscapeRoom"
+    );
+  },
+  async handle(handlerInput) {
+    try {
+      const sesion = await obtenerSesionActual(handlerInput);
+
+      if (!sesion) {
+        return handlerInput.responseBuilder
+          .speak("Debes iniciar sesión antes de cargar un juego.")
+          .reprompt(
+            'Por favor, inicia sesión diciendo "Soy Alumno", "Soy Docente" o "Soy Coordinador".'
+          )
+          .getResponse();
+      }
+
+      const tituloJuego = (
+        Alexa.getSlotValue(handlerInput.requestEnvelope, "tituloJuego") || ""
+      ).toLowerCase();
+
+      const result = await db.buscarJuegoPorTitulo(tituloJuego);
+      const juegosEncontrados = result.juegos || [];
+
+      if (!juegosEncontrados.length) {
+        console.log('CargarEscapeRoomIntentHandler: No se encontró el juego con el título:', tituloJuego);
+        console.log('Listado de juegos en DB:', result.juegos.map(j => j.titulo));
+        return handlerInput.responseBuilder
+          .speak(`No encontré ningún juego con el título "${tituloJuego}".`)
+          .reprompt("Intenta decir el título del juego que quieres cargar.")
+          .getResponse();
+      }
+
+      const juego = juegosEncontrados[0];
+
+      await db.actualizarSesion(sesion.userID, sesion.sesionID, {
+        juegoID: juego.juegoID,
+        puzleActual: 0,
+        puzleIniciado: false,
+        puzleTiempoActivo: false,
+        fallosPuzle: 0,
+        fallosTotales: 0,
+        puzlesSuperados: 0,
+        fechaInicioJuego: new Date().toISOString(),
+        fechaFinJuego: null
+      });
+
+      const speakOutput = `<speak>Cargando juego "${tituloJuego}".<break time="3s"/>${juego.narrativa}</speak>`;
+
+      handlerInput.responseBuilder.addDirective({
+        type: "Alexa.Presentation.HTML.HandleMessage",
+        message: { action: "mostrar_portada", tipo: juego.tipo_portada },
+      });
+
+      return handlerInput.responseBuilder
+        .speak(speakOutput)
+        .reprompt('¿Quieres empezar los desafíos? Di "sí" para continuar')
+        .getResponse();
+    } catch (err) {
+      console.error("Error en CargarEscapeRoomIntentHandler:", err);
+      return handlerInput.responseBuilder
+        .speak("Hubo un error al cargar el juego. Intenta de nuevo más tarde.")
+        .getResponse();
+    }
+  },
+};
+
+/* ---------------------- RESULTADOS / REPORTES ------------------------ */
 
 const ObtenerResultadosAlumnoIntentHandler = {
   canHandle(handlerInput) {
@@ -398,75 +474,7 @@ const GenerarReporteClaseIntentHandler = {
   },
 };
 
-const CargarEscapeRoomIntentHandler = {
-  canHandle(handlerInput) {
-    return (
-      Alexa.getRequestType(handlerInput.requestEnvelope) === "IntentRequest" &&
-      Alexa.getIntentName(handlerInput.requestEnvelope) === "CargarEscapeRoom"
-    );
-  },
-  async handle(handlerInput) {
-    try {
-      const sesion = await obtenerSesionActual(handlerInput);
-
-      if (!sesion) {
-        return handlerInput.responseBuilder
-          .speak("Debes iniciar sesión antes de cargar un juego.")
-          .reprompt(
-            'Por favor, inicia sesión diciendo "Soy Alumno", "Soy Docente" o "Soy Coordinador".'
-          )
-          .getResponse();
-      }
-
-      const tituloJuego = (
-        Alexa.getSlotValue(handlerInput.requestEnvelope, "tituloJuego") || ""
-      ).toLowerCase();
-
-      const result = await db.buscarJuegoPorTitulo(tituloJuego);
-      const juegosEncontrados = result.juegos || [];
-
-      if (!juegosEncontrados.length) {
-        console.log('CargarEscapeRoomIntentHandler: No se encontró el juego con el título:', tituloJuego);
-        console.log('Listado de juegos en DB:', result.juegos.map(j => j.titulo));
-        return handlerInput.responseBuilder
-          .speak(`No encontré ningún juego con el título "${tituloJuego}".`)
-          .reprompt("Intenta decir el título del juego que quieres cargar.")
-          .getResponse();
-      }
-
-      const juego = juegosEncontrados[0];
-
-      await db.actualizarSesion(sesion.userID, sesion.sesionID, {
-        juegoID: juego.juegoID,
-        puzleActual: 0,
-        puzleIniciado: false,
-        puzleTiempoActivo: false,
-        fallosPuzle: 0,
-        fallosTotales: 0,
-        puzlesSuperados: 0,
-        fechaInicioJuego: new Date().toISOString(),
-        fechaFinJuego: null
-      });
-
-      const speakOutput = `<speak>Cargando juego "${tituloJuego}".<break time="3s"/>${juego.narrativa}</speak>`;
-
-      handlerInput.responseBuilder.addDirective({
-        type: "Alexa.Presentation.HTML.HandleMessage",
-        message: { action: "mostrar_portada", tipo: juego.tipo_portada },
-      });
-
-      return handlerInput.responseBuilder
-        .speak(speakOutput)
-        .reprompt('¿Quieres empezar los desafíos? Di "sí" para continuar')
-        .getResponse();
-    } catch (err) {
-      console.error("Error en CargarEscapeRoomIntentHandler:", err);
-      return handlerInput.responseBuilder
-        .speak("Hubo un error al cargar el juego. Intenta de nuevo más tarde.")
-        .getResponse();
-    }
-  },
-};
+/* ---------------------- JUGABILIDAD ------------------------ */
 
 const YesIntentHandler = {
   canHandle(handlerInput) {
@@ -652,6 +660,8 @@ const ResolverPuzleIntentHandler = {
     }
   }
 };
+
+/* ---------------------- COMUNICACIÓN CON WEB APP ------------------------ */
 
 const ProcessHTMLMessageHandler = {
   canHandle(handlerInput) {
@@ -850,6 +860,8 @@ const ProcessHTMLMessageHandler = {
   }
 };
 
+/* ---------------------- HANDLERS AMAZON ------------------------ */
+
 const FallbackIntentHandler = {
   canHandle(handlerInput) {
     if (Alexa.getRequestType(handlerInput.requestEnvelope) !== 'IntentRequest') return false;
@@ -929,6 +941,7 @@ exports.handler = Alexa.SkillBuilders.custom()
     LaunchRequestHandler,
     CrearNuevoJuegoIntentHandler,
     ObtenerResultadosAlumnoIntentHandler,
+    GenerarReporteClaseIntentHandler,
     CargarEscapeRoomIntentHandler,
     YesIntentHandler,
     ResolverPuzleIntentHandler,
