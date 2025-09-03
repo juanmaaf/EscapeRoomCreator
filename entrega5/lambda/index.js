@@ -861,7 +861,7 @@ const ProcessHTMLMessageHandler = {
             Has iniciado sesión correctamente. <break time="0.5s"/>
             Puedes decir: "cargar juego..." y a continuación su título para cargar un juego. <break time="0.5s"/>
             O "crear nuevo juego" para crear uno nuevo. <break time="0.5s"/>
-            O "obtener resultados" y a continuación nombre, curso y grupo.
+            U "obtener resultados" y a continuación nombre, curso y grupo.
           </speak>`;
         } else {
           speakOutput = `<speak>
@@ -870,7 +870,7 @@ const ProcessHTMLMessageHandler = {
             Puedes decir: "cargar juego..." y a continuación su título para cargar un juego. <break time="0.5s"/>
             O "crear nuevo juego" para crear uno nuevo. <break time="0.5s"/>
             O "generar reportes" para generar un nuevo reporte. <break time="0.5s"/>
-            O "obtener resultados" y a continuación nombre, curso y grupo.
+            U "obtener resultados" y a continuación nombre, curso y grupo.
           </speak>`;
         }
 
