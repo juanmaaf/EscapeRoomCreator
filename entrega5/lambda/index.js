@@ -41,18 +41,16 @@ async function juegoTerminado(sesion) {
     return !juego || (sesion.puzleActual >= (juego.puzles ? juego.puzles.length : 0));
   } catch (err) {
     console.error("Error verificando si el juego terminó:", err);
-    return true; // si falla la consulta, mejor devolver que terminó
+    return true;
   }
 }
 
 // Finaliza juego con mensaje estándar
 async function finalizarJuego(handlerInput, sesion) {
   try {
-    // Registrar fecha de fin de juego
     const fechaFin = new Date().toISOString();
     sesion.fechaFinJuego = fechaFin;
 
-    // Guardar resultado antes de eliminar la sesión
     await db.guardarResultado({
       userID: sesion.userID,
       fallosTotales: sesion.fallosTotales,
@@ -61,7 +59,6 @@ async function finalizarJuego(handlerInput, sesion) {
       fechaFinJuego: fechaFin
     });
 
-    // Eliminar sesión
     await db.eliminarSesion(sesion.userID, sesion.sesionID);
 
     return handlerInput.responseBuilder
@@ -292,7 +289,7 @@ const CargarEscapeRoomIntentHandler = {
         return handlerInput.responseBuilder
           .speak("Debes iniciar sesión antes de cargar un juego.")
           .reprompt(
-            'Por favor, inicia sesión diciendo "Soy Alumno", "Soy Docente" o "Soy Coordinador".'
+            'Por favor, inicia sesión pulsando "Soy Alumno", "Soy Docente" o "Soy Coordinador".'
           )
           .getResponse();
       }
@@ -504,7 +501,6 @@ const ObtenerReportesClaseIntentHandler = {
           .getResponse();
       }
 
-      // Llamada a tu método de DB
       const reportesData = await db.obtenerReportesClase(curso, grupo);
 
       if (!reportesData.success || !reportesData.reportes.length) {
@@ -515,7 +511,6 @@ const ObtenerReportesClaseIntentHandler = {
 
       const reportes = reportesData.reportes;
 
-      // Enviar los reportes a la pantalla
       handlerInput.responseBuilder.addDirective({
         type: "Alexa.Presentation.HTML.HandleMessage",
         message: {
@@ -863,11 +858,13 @@ const ProcessHTMLMessageHandler = {
         if (tipo === "docente") {
           speakOutput = `¡Bienvenido, ${result.nombre}! Has iniciado sesión correctamente. ` +
                         `Puedes decir: "cargar juego..." y a continuación su título para cargar un juego o ` +
-                        `"crear nuevo juego" para crear uno nuevo.`;
+                        `"crear nuevo juego" para crear uno nuevo.` +
+                        `"obtener resultados" y a continuación nombre, curso y grupo.`;
         } else {
           speakOutput = `¡Bienvenido, ${result.nombre}! Has iniciado sesión correctamente. ` +
                         `Puedes decir: "cargar juego..." y a continuación su título para cargar un juego o ` +
                         `"crear nuevo juego" para crear uno nuevo o ` +
+                        `"obtener resultados" y a continuación nombre, curso y grupo.` +
                         `"generar reportes" para generar un nuevo reporte.`;
         }
 
@@ -1010,7 +1007,7 @@ const HelpIntentHandler = {
   },
   handle(handlerInput) {
     return handlerInput.responseBuilder
-      .speak('Para jugar, utiliza la pantalla y los comandos de voz para interactuar con el juego. Si quieres salir, di "salir del juego".')
+      .speak('Para jugar, revisa el manual de usuario para ver los comandos disponibles. Si quieres salir, di "salir del juego".')
       .reprompt('¿Qué quieres hacer?')
       .getResponse();
   }
