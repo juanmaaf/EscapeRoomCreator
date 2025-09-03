@@ -724,6 +724,47 @@ const ResolverPuzleIntentHandler = {
   }
 };
 
+/* ---------------------- NUEVAS FUNCIONALIDADES ------------------------ */
+
+const CerrarSesionIntentHandler = {
+  canHandle(handlerInput) {
+    return (
+      Alexa.getRequestType(handlerInput.requestEnvelope) === "IntentRequest" &&
+      Alexa.getIntentName(handlerInput.requestEnvelope) === "CerrarSesion"
+    );
+  },
+
+  handle: async (handlerInput) => {
+    try {
+      const sesion = await obtenerSesionActual(handlerInput);
+
+      if (!sesion) {
+        return handlerInput.responseBuilder
+          .speak("No tienes una sesión activa en este momento.")
+          .getResponse();
+      }
+
+      await eliminarSesion(sesion.userID, sesion.sesionID);
+
+      handlerInput.responseBuilder.addDirective({
+        type: "Alexa.Presentation.HTML.HandleMessage",
+        message: {
+          action: "cerrar_sesion",
+        },
+      });
+
+      return handlerInput.responseBuilder
+        .speak("Tu sesión ha sido cerrada. Volviendo a la pantalla inicial.")
+        .getResponse();
+    } catch (err) {
+      console.error("Error en CerrarSesionIntentHandler:", err);
+      return handlerInput.responseBuilder
+        .speak("Ocurrió un error al intentar cerrar la sesión.")
+        .getResponse();
+    }
+  },
+};
+
 /* ---------------------- COMUNICACIÓN CON WEB APP ------------------------ */
 
 const ProcessHTMLMessageHandler = {
@@ -1009,6 +1050,7 @@ exports.handler = Alexa.SkillBuilders.custom()
     CargarEscapeRoomIntentHandler,
     YesIntentHandler,
     ResolverPuzleIntentHandler,
+    CerrarSesionIntentHandler,
     ProcessHTMLMessageHandler,
     CancelAndStopIntentHandler,
     HelpIntentHandler,
