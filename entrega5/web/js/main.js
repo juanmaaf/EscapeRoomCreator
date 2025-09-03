@@ -437,21 +437,21 @@ function handleMessageFromSkill(message) {
             case "cifrado-cesar":
                 if (message.datos) {
                     const mensaje = encodeURIComponent(message.datos);
-                    url = `https://d1qeen6fmshz39.cloudfront.net/entrega4/paginas_puzles/cifrado_cesar.html?mensajeCifrado=${mensaje}`;
+                    url = `https://d1qeen6fmshz39.cloudfront.net/entrega5/paginas_puzles/cifrado_cesar.html?mensajeCifrado=${mensaje}`;
                 }
                 break;
 
             case "acertijo":
                 if (message.instruccion) {
                     const instr = encodeURIComponent(message.instruccion);
-                    url = `https://d1qeen6fmshz39.cloudfront.net/entrega4/paginas_puzles/acertijo.html?instruccion=${instr}`;
+                    url = `https://d1qeen6fmshz39.cloudfront.net/entrega5/paginas_puzles/acertijo.html?instruccion=${instr}`;
                 }
                 break;
 
             case "logica":
                 if (message.instruccion) {
                     const instr = encodeURIComponent(message.instruccion);
-                    url = `https://d1qeen6fmshz39.cloudfront.net/entrega4/paginas_puzles/logica.html?instruccion=${instr}`;
+                    url = `https://d1qeen6fmshz39.cloudfront.net/entrega5/paginas_puzles/logica.html?instruccion=${instr}`;
                 }
                 break;
 
@@ -479,7 +479,7 @@ function handleMessageFromSkill(message) {
     }
     else if (message.action === "mostrar_portada") {
       const tipo = message.tipo || 'hab_oscura';
-      const urlImagen = `https://d1qeen6fmshz39.cloudfront.net/entrega4/portadas_base/${tipo}.jpg`;
+      const urlImagen = `https://d1qeen6fmshz39.cloudfront.net/entrega5/portadas_base/${tipo}.jpg`;
   
       document.getElementById('iframe-container').innerHTML = `
           <img src="${urlImagen}" alt="${tipo}"
