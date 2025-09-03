@@ -616,6 +616,17 @@ function handleMessageFromSkill(message) {
       html += "</div>";
       container.innerHTML = html;
     }
+    else if (message.action === "cerrar_sesion") {
+      const container = document.getElementById("iframe-container");
+      container.innerHTML = `
+        <h1>ESCAPE ROOM CREATOR</h1>
+        <div id="menu-inicial">
+            <button onclick="mostrarFormularioAlumno()">Soy Alumno</button>
+            <button onclick="mostrarFormularioDocente()">Soy Docente</button>
+            <button onclick="mostrarFormularioCoordinador()">Soy Coordinador</button>
+        </div>
+      `;
+    }
     else {
         logToCloudwatch("Acción no reconocida: " + message.action);
     }
