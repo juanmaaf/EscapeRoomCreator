@@ -856,16 +856,22 @@ const ProcessHTMLMessageHandler = {
 
         let speakOutput = "";
         if (tipo === "docente") {
-          speakOutput = `¡Bienvenido, ${result.nombre}! Has iniciado sesión correctamente. ` +
-                        `Puedes decir: "cargar juego..." y a continuación su título para cargar un juego o ` +
-                        `"crear nuevo juego" para crear uno nuevo u` +
-                        `"obtener resultados" y a continuación nombre, curso y grupo.`;
+          speakOutput = `<speak>
+            ¡Bienvenido, ${result.nombre}! <break time="0.5s"/>
+            Has iniciado sesión correctamente. <break time="0.5s"/>
+            Puedes decir: "cargar juego..." y a continuación su título para cargar un juego. <break time="0.5s"/>
+            O "crear nuevo juego" para crear uno nuevo. <break time="0.5s"/>
+            O "obtener resultados" y a continuación nombre, curso y grupo.
+          </speak>`;
         } else {
-          speakOutput = `¡Bienvenido, ${result.nombre}! Has iniciado sesión correctamente. ` +
-                        `Puedes decir: "cargar juego..." y a continuación su título para cargar un juego o ` +
-                        `"crear nuevo juego" para crear uno nuevo o ` +
-                        `"generar reportes" para generar un nuevo reporte u` +
-                        `"obtener resultados" y a continuación nombre, curso y grupo.`;
+          speakOutput = `<speak>
+            ¡Bienvenido, ${result.nombre}! <break time="0.5s"/>
+            Has iniciado sesión correctamente. <break time="0.5s"/>
+            Puedes decir: "cargar juego..." y a continuación su título para cargar un juego. <break time="0.5s"/>
+            O "crear nuevo juego" para crear uno nuevo. <break time="0.5s"/>
+            O "generar reportes" para generar un nuevo reporte. <break time="0.5s"/>
+            O "obtener resultados" y a continuación nombre, curso y grupo.
+          </speak>`;
         }
 
         handlerInput.responseBuilder.addDirective({
