@@ -858,14 +858,14 @@ const ProcessHTMLMessageHandler = {
         if (tipo === "docente") {
           speakOutput = `¡Bienvenido, ${result.nombre}! Has iniciado sesión correctamente. ` +
                         `Puedes decir: "cargar juego..." y a continuación su título para cargar un juego o ` +
-                        `"crear nuevo juego" para crear uno nuevo.` +
+                        `"crear nuevo juego" para crear uno nuevo u` +
                         `"obtener resultados" y a continuación nombre, curso y grupo.`;
         } else {
           speakOutput = `¡Bienvenido, ${result.nombre}! Has iniciado sesión correctamente. ` +
                         `Puedes decir: "cargar juego..." y a continuación su título para cargar un juego o ` +
                         `"crear nuevo juego" para crear uno nuevo o ` +
-                        `"obtener resultados" y a continuación nombre, curso y grupo.` +
-                        `"generar reportes" para generar un nuevo reporte.`;
+                        `"generar reportes" para generar un nuevo reporte u` +
+                        `"obtener resultados" y a continuación nombre, curso y grupo.`;
         }
 
         handlerInput.responseBuilder.addDirective({
