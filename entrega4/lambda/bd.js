@@ -393,6 +393,44 @@ async function generarReporteClase(curso, grupo) {
     return { success: true, reporte: itemReporte };
 }
 
+// Obtener reportes de una clase (curso + grupo)
+async function obtenerReportesClase(curso, grupo) {
+    const cursoStr = curso.toString();
+    const grupoStr = grupo.toUpperCase();
+    const cursoGrupo = `${cursoStr}#${grupoStr}`;
+
+    const params = {
+        TableName: REPORTES_TABLE,
+        KeyConditionExpression: "cursoGrupo = :cg",
+        ExpressionAttributeValues: {
+            ":cg": cursoGrupo
+        },
+        ScanIndexForward: false
+    };
+
+    try {
+        const result = await ddb.query(params).promise();
+
+        if (!result.Items || result.Items.length === 0) {
+            return {
+                success: false,
+                message: `No se encontraron reportes para el curso ${curso} grupo ${grupo}`
+            };
+        }
+
+        return {
+            success: true,
+            reportes: result.Items
+        };
+    } catch (err) {
+        console.error("Error al obtener reportes:", err);
+        return {
+            success: false,
+            message: "Error interno al obtener los reportes"
+        };
+    }
+}
+
 /* ---------------------- EXPORTS ------------------------ */
 
 module.exports = { 
@@ -409,5 +447,6 @@ module.exports = {
     eliminarSesion,
     guardarResultado,
     obtenerResultadosAlumno,
-    generarReporteClase
+    generarReporteClase,
+    obtenerReportesClase
 };
