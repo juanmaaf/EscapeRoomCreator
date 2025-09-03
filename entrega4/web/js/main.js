@@ -564,6 +564,58 @@ function handleMessageFromSkill(message) {
       html += "</div>";
       container.innerHTML = html;
     }
+    else if (message.action === "mostrar_reportes_clase") {
+      const reportes = message.datos || [];
+      const container = document.getElementById('iframe-container');
+  
+      if (reportes.length === 0) {
+          container.innerHTML = `
+            <div style="padding:20px; text-align:center;">
+              <h2>Reportes de la clase</h2>
+              <p style="color:#6b7280;">No hay reportes registrados.</p>
+            </div>`;
+          return;
+      }
+  
+      let html = `
+        <h2 style="text-align:center; margin-bottom:15px;">📄 Reportes de la clase</h2>
+        <div style="
+          display: grid; 
+          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+          gap: 15px;
+          padding: 10px;
+          max-height: 70vh;
+          overflow-y: auto;
+        ">
+      `;
+  
+      reportes.forEach((item, index) => {
+          const fechaGen = new Date(item.fechaGeneracion);
+          html += `
+            <div style="
+              background:#ffffff;
+              border: 1px solid #e5e7eb;
+              border-radius: 12px;
+              padding: 16px;
+              box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+              display: flex;
+              flex-direction: column;
+              gap: 6px;
+            ">
+              <h3 style="margin:0; color:#374151; font-size:1.1em;">Reporte ${index + 1}</h3>
+              <p style="margin:0; color:#374151;"><strong>👥 Total alumnos:</strong> ${item.totalAlumnos}</p>
+              <p style="margin:0; color:#374151;"><strong>📊 Total resultados:</strong> ${item.totalResultados}</p>
+              <p style="margin:0; color:#374151;"><strong>❌ Promedio fallos:</strong> ${item.promedioFallos.toFixed(2)}</p>
+              <p style="margin:0; color:#374151;"><strong>✅ Promedio puzles superados:</strong> ${item.promedioPuzles.toFixed(2)}</p>
+              <p style="margin:0; color:#1f2937; font-weight:bold;">⏱️ Promedio tiempo: ${Math.round(item.promedioTiempoSegundos)} segundos</p>
+              <p style="margin:0; color:#4b5563; font-size:0.9em;">📅 Fecha generación: ${fechaGen.toLocaleString()}</p>
+            </div>
+          `;
+      });
+  
+      html += "</div>";
+      container.innerHTML = html;
+    }
     else {
         logToCloudwatch("Acción no reconocida: " + message.action);
     }
