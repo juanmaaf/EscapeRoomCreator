@@ -327,7 +327,7 @@ const CargarEscapeRoomIntentHandler = {
         fechaFinJuego: null
       });
 
-      const speakOutput = `<speak>Cargando juego "${tituloJuego}".<break time="3s"/>${juego.narrativa}</speak>`;
+      const speakOutput = `<speak>Cargando juego "${tituloJuego}".<break time="3s"/>${juego.narrativa}<break time="1s"/>¿Quieres empezar los desafíos? Di "sí" para continuar.</speak>`;
 
       handlerInput.responseBuilder.addDirective({
         type: "Alexa.Presentation.HTML.HandleMessage",
