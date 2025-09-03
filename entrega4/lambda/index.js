@@ -346,6 +346,58 @@ const ObtenerResultadosAlumnoIntentHandler = {
   },
 };
 
+const GenerarReporteClaseIntentHandler = {
+  canHandle(handlerInput) {
+    return (
+      Alexa.getRequestType(handlerInput.requestEnvelope) === "IntentRequest" &&
+      Alexa.getIntentName(handlerInput.requestEnvelope) === "GenerarReporteClase"
+    );
+  },
+
+  handle: async (handlerInput) => {
+    try {
+      const sesion = await obtenerSesionActual(handlerInput);
+
+      if (!sesion || sesion.tipoUsuario !== "coordinador") {
+        return handlerInput.responseBuilder
+          .speak("Solo los coordinadores pueden generar reportes de clases.")
+          .getResponse();
+      }
+
+      const curso = Alexa.getSlotValue(handlerInput.requestEnvelope, "curso");
+      const grupo = Alexa.getSlotValue(handlerInput.requestEnvelope, "grupo");
+
+      console.log(`GenerarReporteClase slots -> curso: ${curso}, grupo: ${grupo}`);
+
+      if (!curso || !grupo) {
+        return handlerInput.responseBuilder
+          .speak("Necesito el curso y el grupo para generar el reporte.")
+          .reprompt("Por favor, dime el curso y grupo de la clase.")
+          .getResponse();
+      }
+
+      const reporteData = await db.generarReporteClase(curso, grupo);
+
+      if (!reporteData.success) {
+        return handlerInput.responseBuilder
+          .speak(reporteData.message || "No se pudo generar el reporte para esa clase.")
+          .getResponse();
+      }
+
+      return handlerInput.responseBuilder
+        .speak(
+          `He generado el reporte del curso ${curso}, grupo ${grupo}.`
+        )
+        .getResponse();
+    } catch (err) {
+      console.error("Error en GenerarReporteClaseIntentHandler:", err);
+      return handlerInput.responseBuilder
+        .speak("Ocurrió un error al generar el reporte. Intenta de nuevo.")
+        .getResponse();
+    }
+  },
+};
+
 const CargarEscapeRoomIntentHandler = {
   canHandle(handlerInput) {
     return (

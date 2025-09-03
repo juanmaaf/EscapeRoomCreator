@@ -12,10 +12,21 @@ const USUARIOS_TABLE = 'EscapeRoomUsuarios';
 const JUEGOS_TABLE = 'EscapeRoomJuegos';
 const SESIONES_TABLE = 'EscapeRoomSesiones';
 const RESULTADOS_TABLE = 'EscapeRoomResultados';
+const REPORTES_TABLE = 'EscapeRoomReportes';
 
 /* ===================== MÉTODOS ===================== */
 
+/* ---------------------- MÉTODOS AUXILIARES ------------------------ */
+
+// Calcula la diferencia en segundos entre dos fechas ISO
+function calcularSegundos(fechaInicio, fechaFin) {
+    const inicio = new Date(fechaInicio);
+    const fin = new Date(fechaFin);
+    return Math.floor((fin - inicio) / 1000);
+}
+
 /* ---------------------- USUARIOS ------------------------ */
+
 // Registro docente/coordinador
 async function registrarDocenteCoordinador({ nombre, usuario, password, tipo }) {
     if (!['docente', 'coordinador'].includes(tipo)) {
@@ -300,6 +311,88 @@ async function obtenerResultadosAlumno(nombre, curso, grupo) {
     return { success: true, resultados: resultResultados.Items || [] };
 }
 
+/* ---------------------- REPORTES ------------------------ */
+
+// Generar reporte por clase (curso + grupo)
+async function generarReporteClase(curso, grupo) {
+    const cursoStr = curso.toString();
+    const grupoStr = grupo.toUpperCase();
+
+    // 1. Obtener todos los alumnos del curso y grupo mediante scan
+    const paramsAlumnos = {
+        TableName: USUARIOS_TABLE,
+        FilterExpression: '#tipo = :tipo AND #curso = :curso AND #grupo = :grupo',
+        ExpressionAttributeNames: {
+            '#tipo': 'tipo',
+            '#curso': 'curso',
+            '#grupo': 'grupo'
+        },
+        ExpressionAttributeValues: {
+            ':tipo': 'alumno',
+            ':curso': cursoStr,
+            ':grupo': grupoStr
+        }
+    };
+
+    const alumnosResult = await ddb.scan(paramsAlumnos).promise();
+    const alumnos = alumnosResult.Items || [];
+
+    if (alumnos.length === 0) {
+        return { success: false, message: `No se encontraron alumnos en el curso ${curso} grupo ${grupo}` };
+    }
+
+    // 2. Obtener resultados de todos los alumnos
+    let totalFallos = 0;
+    let totalPuzles = 0;
+    let totalTiempo = 0;
+    let totalResultados = 0;
+
+    for (const alumno of alumnos) {
+        const paramsResultados = {
+            TableName: RESULTADOS_TABLE,
+            KeyConditionExpression: 'userID = :uid',
+            ExpressionAttributeValues: { ':uid': alumno.userID }
+        };
+
+        const resultadosAlumno = await ddb.query(paramsResultados).promise();
+        const resultados = resultadosAlumno.Items || [];
+
+        for (const r of resultados) {
+            totalFallos += r.fallosTotales || 0;
+            totalPuzles += r.puzlesSuperados || 0;
+            totalTiempo += calcularSegundos(r.fechaInicioJuego, r.fechaFinJuego);
+            totalResultados++;
+        }
+    }
+
+    if (totalResultados === 0) {
+        return { success: false, message: `No se encontraron resultados de alumnos en el curso ${curso} grupo ${grupo}` };
+    }
+
+    // 3. Calcular promedios
+    const promedioFallos = totalFallos / totalResultados;
+    const promedioPuzles = totalPuzles / totalResultados;
+    const promedioTiempoSegundos = totalTiempo / totalResultados;
+
+    // 4. Crear reporte
+    const reportID = uuidv4();
+    const cursoGrupo = `${cursoStr}#${grupoStr}`;
+    const itemReporte = {
+        cursoGrupo,
+        reportID,
+        fechaGeneracion: new Date().toISOString(),
+        totalAlumnos: alumnos.length,
+        totalResultados,
+        promedioFallos,
+        promedioPuzles,
+        promedioTiempoSegundos
+    };
+
+    await ddb.put({ TableName: REPORTES_TABLE, Item: itemReporte }).promise();
+
+    return { success: true, reporte: itemReporte };
+}
+
 /* ---------------------- EXPORTS ------------------------ */
 
 module.exports = { 
@@ -315,5 +408,6 @@ module.exports = {
     actualizarSesion,
     eliminarSesion,
     guardarResultado,
-    obtenerResultadosAlumno
+    obtenerResultadosAlumno,
+    generarReporteClase
 };

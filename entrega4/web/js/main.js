@@ -513,41 +513,54 @@ function handleMessageFromSkill(message) {
     else if (message.action === "mostrar_resultados_alumno") {
       const resultados = message.datos || [];
       const container = document.getElementById('iframe-container');
-  
+    
       if (resultados.length === 0) {
-          container.innerHTML = "<p>No hay resultados para mostrar.</p>";
-          return;
+        container.innerHTML = `
+          <div style="padding:20px; text-align:center;">
+            <h2>Resultados del alumno</h2>
+            <p style="color:#6b7280;">No hay resultados registrados.</p>
+          </div>`;
+        return;
       }
-  
+    
       let html = `
-        <h2>Resultados del alumno</h2>
+        <h2 style="text-align:center; margin-bottom:15px;">📊 Resultados del alumno</h2>
         <div style="
-          display: flex; 
-          flex-direction: column; 
-          gap: 10px;
+          display: grid; 
+          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+          gap: 15px;
           padding: 10px;
           max-height: 70vh;
           overflow-y: auto;
         ">
       `;
-  
+    
       resultados.forEach((item, index) => {
-          const inicio = new Date(item.fechaInicioJuego);
-          const fin = new Date(item.fechaFinJuego);
-          const tiempoSegundos = Math.floor((fin - inicio) / 1000);
-  
-          html += `
-            <div style="border: 1px solid #ccc; padding: 10px; border-radius: 8px;">
-              <strong>Resultado ${index + 1}</strong><br>
-              Fallos Totales: ${item.fallosTotales}<br>
-              Puzles Superados: ${item.puzlesSuperados}<br>
-              Inicio: ${inicio.toLocaleString()}<br>
-              Fin: ${fin.toLocaleString()}<br>
-              ⏱️ Tiempo total: ${tiempoSegundos} segundos
-            </div>
-          `;
+        const inicio = new Date(item.fechaInicioJuego);
+        const fin = new Date(item.fechaFinJuego);
+        const tiempoSegundos = Math.floor((fin - inicio) / 1000);
+    
+        html += `
+          <div style="
+            background:#ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+          ">
+            <h3 style="margin:0; color:#374151; font-size:1.1em;">Resultado ${index + 1}</h3>
+            <p style="margin:0; color:#374151;"><strong>❌ Fallos:</strong> ${item.fallosTotales}</p>
+            <p style="margin:0; color:#374151;"><strong>✅ Puzles superados:</strong> ${item.puzlesSuperados}</p>
+            <p style="margin:0; color:#4b5563; font-size:0.9em;">📅 Inicio: ${inicio.toLocaleString()}</p>
+            <p style="margin:0; color:#4b5563; font-size:0.9em;">📅 Fin: ${fin.toLocaleString()}</p>
+            <p style="margin:0; color:#1f2937; font-weight:bold;">⏱️ Tiempo: ${tiempoSegundos} segundos</p>
+          </div>
+        `;
       });
-  
+    
       html += "</div>";
       container.innerHTML = html;
     }
