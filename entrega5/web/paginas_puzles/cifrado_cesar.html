@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8">
+    <title>Disco César</title>
+    <style>
+      body {
+      font-family: sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 20px;
+      background: #f9f9f9;
+      }
+
+      .disco-container {
+        position: relative;
+        width: 280px;
+        height: 280px;
+        margin: auto;
+      }
+
+      .disco {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border: 3px solid #ccc;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 14px;
+      }
+
+      .disco div {
+      position: absolute;
+      width: 20px;
+      text-align: center;
+      }
+
+      .interior {
+      background-color: rgba(0, 128, 255, 0.1);
+      transition: transform 0.3s ease;
+      }
+
+      #clave-slider {
+      width: 40%;
+      margin-top: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Disco de Cifrado César</h2>
+    <div class="disco-container">
+      <div class="disco exterior"></div>
+      <div class="disco interior" id="disco-interior"></div>
+    </div>
+    <input type="range" id="clave-slider" min="0" max="26" value="0" />
+    <p>Clave actual: <span id="clave-valor">0</span></p>
+    <p><strong>Mensaje cifrado: </strong><span id="mensaje-cifrado">Cargando...</span></p>
+
+    <script>
+      const ALFABETO = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+      let alexaClient;
+
+      function crearDiscoLetras(container, letras, radio) {
+        const n = letras.length;
+        letras.split("").forEach((letra, i) => {
+          const angle = (360 / n) * i;
+          const el = document.createElement("div");
+          el.style.transform = `rotate(${angle}deg) translate(${radio}px) rotate(-${angle}deg)`;
+          el.textContent = letra;
+          container.appendChild(el);
+        });
+      }
+
+      function obtenerMensajeDesdeURL() {
+        const params = new URLSearchParams(window.location.search);
+        return params.get('mensajeCifrado') || 'Sin mensaje';
+      }
+      
+      document.addEventListener('DOMContentLoaded', () => {
+        crearDiscoLetras(document.querySelector(".exterior"), ALFABETO, 120);
+        crearDiscoLetras(document.querySelector(".interior"), ALFABETO, 95);
+
+        const mensajeCifrado = decodeURIComponent(obtenerMensajeDesdeURL());
+        document.getElementById('mensaje-cifrado').textContent = mensajeCifrado;
+
+        document.getElementById("clave-slider").addEventListener("input", (e) => {
+          const clave = parseInt(e.target.value, 10);
+          document.getElementById("clave-valor").textContent = clave;
+          const gradosPorLetra = 360 / ALFABETO.length;
+          const angulo = clave * gradosPorLetra;
+          document.getElementById("disco-interior").style.transform = `rotate(-${angulo}deg)`;
+        });
+      });
+    </script>
+  </body>
+</html>
