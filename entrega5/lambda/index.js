@@ -744,7 +744,7 @@ const CerrarSesionIntentHandler = {
           .getResponse();
       }
 
-      await eliminarSesion(sesion.userID, sesion.sesionID);
+      await db.eliminarSesion(sesion.userID, sesion.sesionID);
 
       handlerInput.responseBuilder.addDirective({
         type: "Alexa.Presentation.HTML.HandleMessage",
