@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Desafío de Acertijo</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      font-family: "Georgia", serif;
+      background-color: #000000;
+      color: #f5f5f5;
+    }
+
+    .marco {
+      width: 100%;
+      height: 100%;
+      box-sizing: border-box;
+      border: 10px solid #ffd700; /* Marco exterior dorado */
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: #000000;
+    }
+
+    .contenedor {
+      background-color: #111111;
+      border-radius: 12px;
+      padding: 30px 20px;
+      max-width: 600px;
+      width: 90%;
+      text-align: center;
+      box-shadow: 0 0 25px rgba(255, 255, 255, 0.08);
+    }
+
+    h2 {
+      margin-bottom: 20px;
+      font-size: 1.6em;
+      color: #ffd700;
+      text-shadow: 0 0 8px rgba(255, 215, 0, 0.7);
+    }
+
+    #instruccion {
+      font-size: 1.3em;
+      margin: 20px 0;
+      line-height: 1.6;
+      color: #e0e0e0;
+      font-style: italic;
+    }
+
+    .icono {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+      color: #ffd700;
+      text-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+    }
+  </style>
+</head>
+<body>
+  <div class="marco">
+    <div class="contenedor">
+      <div class="icono">❓</div>
+      <h2>Desafío de Acertijo</h2>
+      <p id="instruccion">Cargando...</p>
+    </div>
+  </div>
+
+  <script>
+    function getParam(name) {
+      return new URLSearchParams(window.location.search).get(name) || '';
+    }
+
+    const instruccion = decodeURIComponent(getParam('instruccion'));
+    document.getElementById('instruccion').textContent = instruccion;
+  </script>
+</body>
+</html>
